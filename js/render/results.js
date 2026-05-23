@@ -1,6 +1,7 @@
 import { MISSIONS } from '../../config/propellants.js';
 import { calcMaxPayload } from '../physics.js';
-import { fmass, fdv, fthrust } from '../format.js';
+import { calcCost } from '../cost.js';
+import { fmass, fdv, fthrust, fcost } from '../format.js';
 
 export function renderResults(phys) {
   const { stages, totalDv, totalWet } = phys;
@@ -42,8 +43,10 @@ export function renderResults(phys) {
         <div class="stat-item"><div class="sl">Mass Ratio</div> <div class="sv">${s.mr.toFixed(2)}</div></div>
         <div class="stat-item"><div class="sl">${ispLabel}</div><div class="sv">${s.isp} s</div></div>
         <div class="stat-item"><div class="sl">Thrust</div>    <div class="sv">${fthrust(s.thrust)}</div></div>
-        <div class="stat-item"><div class="sl">σ total</div>
-                               <div class="sv">${s.sigma.toFixed(3)}</div></div>
+        <div class="stat-item"><div class="sl">σ total</div>  <div class="sv">${s.sigma.toFixed(3)}</div></div>
+        ${s.sigmaBreakdown.engineCount !== null
+          ? `<div class="stat-item"><div class="sl">Engines</div>   <div class="sv">${Math.ceil(s.sigmaBreakdown.engineCount)} × ${s.thrustPerEngine} kN</div></div>`
+          : ''}
       </div>
       <div class="sigma-breakdown sigma-breakdown-result">
         <div class="sb-row"><span>σ tank</span><span class="sv">${s.sigmaBreakdown.tank.toFixed(4)}</span></div>
@@ -70,8 +73,10 @@ export function renderResults(phys) {
         <div class="stat-item"><div class="sl">Mass Ratio</div>      <div class="sv">${br.mr.toFixed(2)}</div></div>
         <div class="stat-item"><div class="sl">Isp (SL)</div>        <div class="sv">${br.isp} s</div></div>
         <div class="stat-item"><div class="sl">Thrust (each)</div>   <div class="sv">${fthrust(br.thrust)}</div></div>
-        <div class="stat-item"><div class="sl">σ total</div>
-                               <div class="sv">${br.sigma.toFixed(3)}</div></div>
+        <div class="stat-item"><div class="sl">σ total</div>         <div class="sv">${br.sigma.toFixed(3)}</div></div>
+        ${br.sigmaBreakdown.engineCount !== null
+          ? `<div class="stat-item"><div class="sl">Engines (each)</div><div class="sv">${Math.ceil(br.sigmaBreakdown.engineCount)} × ${br.thrustPerEngine} kN</div></div>`
+          : ''}
       </div>
       <div class="sigma-breakdown sigma-breakdown-result">
         <div class="sb-row"><span>σ tank</span><span class="sv">${br.sigmaBreakdown.tank.toFixed(4)}</span></div>
@@ -94,5 +99,47 @@ export function renderResults(phys) {
     <div class="sum-item"><div class="sl">Propellant</div> <div class="sv">${fmass(totalPropMass)}</div></div>
     <div class="sum-item"><div class="sl">Structure</div>  <div class="sv">${fmass(totalDryMass)}</div></div>
     <div class="sum-item"><div class="sl">Stages</div>     <div class="sv">${stages.length}</div></div>
+  `;
+
+  // Cost estimate
+  const cost    = calcCost(phys);
+  const leoPayload = calcMaxPayload(MISSIONS[0].dv);
+  const costPerKg  = (leoPayload !== null && leoPayload >= 1)
+    ? cost.total / leoPayload : null;
+
+  const pct = v => `${Math.round(v / cost.total * 100)}%`;
+  document.getElementById('cost-section').innerHTML = `
+    <div class="cost-totals">
+      <div class="cost-total-item">
+        <div class="total-label">Vehicle Cost</div>
+        <div class="total-val" style="font-size:18px">${fcost(cost.total)}</div>
+      </div>
+      <div class="cost-total-item">
+        <div class="total-label">Cost / kg to LEO</div>
+        <div class="total-val" style="font-size:18px">${costPerKg !== null ? fcost(costPerKg) + '/kg' : '—'}</div>
+      </div>
+    </div>
+    <div class="cost-breakdown">
+      <div class="cb-row">
+        <span class="cb-label">Propellant</span>
+        <div class="cb-bar-wrap"><div class="cb-bar" style="width:${pct(cost.propTotal)};background:#10b981"></div></div>
+        <span class="cb-val">${fcost(cost.propTotal)}</span>
+      </div>
+      <div class="cb-row">
+        <span class="cb-label">Tanks</span>
+        <div class="cb-bar-wrap"><div class="cb-bar" style="width:${pct(cost.tankTotal)};background:#0ea5e9"></div></div>
+        <span class="cb-val">${fcost(cost.tankTotal)}</span>
+      </div>
+      <div class="cb-row">
+        <span class="cb-label">Engines</span>
+        <div class="cb-bar-wrap"><div class="cb-bar" style="width:${pct(cost.engineTotal)};background:#a78bfa"></div></div>
+        <span class="cb-val">${fcost(cost.engineTotal)}</span>
+      </div>
+      <div class="cb-row">
+        <span class="cb-label">Other</span>
+        <div class="cb-bar-wrap"><div class="cb-bar" style="width:${pct(cost.otherTotal)};background:#64748b"></div></div>
+        <span class="cb-val">${fcost(cost.otherTotal)}</span>
+      </div>
+    </div>
   `;
 }

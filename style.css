@@ -306,6 +306,37 @@ input[type="range"]::-moz-range-thumb {
 .sum-item .sl { font-size: 10px; color: var(--muted); margin-bottom: 3px; }
 .sum-item .sv { font-size: 16px; font-family: var(--mono); font-weight: 700; }
 
+/* ── Cost section ── */
+.cost-totals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.cost-total-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.cost-breakdown { display: flex; flex-direction: column; gap: 6px; }
+.cb-row {
+  display: grid;
+  grid-template-columns: 56px 1fr 52px;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.cb-label { color: var(--muted); }
+.cb-bar-wrap {
+  height: 5px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.cb-bar { height: 100%; border-radius: 3px; transition: width .3s; }
+.cb-val { font-family: var(--mono); font-size: 11px; text-align: right; }
+
 /* ── Sigma breakdown ── */
 .sigma-breakdown {
   margin-top: 5px;

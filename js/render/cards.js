@@ -1,5 +1,6 @@
 import { PROPS } from '../../config/propellants.js';
 import { TANK_MATERIALS } from '../../config/materials.js';
+import { ENGINE_TYPES } from '../../config/engines.js';
 import { state, advancedOpen } from '../state.js';
 import { update } from '../update.js';
 
@@ -9,6 +10,38 @@ function materialOptions(selected) {
   ).join('');
 }
 
+function engineTypeOptions(selected) {
+  return Object.entries(ENGINE_TYPES).map(([key, e]) =>
+    `<option value="${key}" ${key === selected ? 'selected' : ''}>${e.name}</option>`
+  ).join('');
+}
+
+function liquidAdvanced(s, isSuffix) {
+  const id = s.id + isSuffix;
+  return `
+    <div class="row">
+      <div class="row-label"><span>Engine cycle</span></div>
+      <select class="prop-select" data-id="${s.id}" data-param="engineType">
+        ${engineTypeOptions(s.engineType)}
+      </select>
+    </div>
+    <div class="row">
+      <div class="row-label">
+        <span>Thrust / engine</span>
+        <span class="val" id="v-thrust-${s.id}">${s.thrustPerEngine} kN</span>
+      </div>
+      <input type="range" min="10" max="5000" step="10" value="${s.thrustPerEngine}"
+        data-id="${s.id}" data-param="thrustPerEngine">
+    </div>
+    <div class="row">
+      <div class="row-label">
+        <span>Burn time</span>
+        <span class="val" id="v-burntime-${s.id}">${s.burnTime} s</span>
+      </div>
+      <input type="range" min="30" max="600" step="10" value="${s.burnTime}"
+        data-id="${s.id}" data-param="burnTime">
+    </div>`;
+}
 
 export function renderCards() {
   const cont     = document.getElementById('stage-cards');
@@ -17,7 +50,6 @@ export function renderCards() {
   cont.innerHTML = stages.map((s, i) => {
     const p       = PROPS[s.propellant];
     const open    = advancedOpen[s.id] || false;
-    const isSolid = p.solid;
 
     return `
       <div class="stage-card" data-id="${s.id}">
@@ -70,23 +102,7 @@ export function renderCards() {
                 ${materialOptions(s.tankMaterial)}
               </select>
             </div>
-            <div class="row">
-              <div class="row-label">
-                <span>Tank pressure</span>
-                <span class="val" id="v-pressure-${s.id}">${s.tankPressure} bar</span>
-              </div>
-              <input type="range" min="1" max="${isSolid ? 100 : 10}" step="${isSolid ? 5 : 0.5}"
-                value="${s.tankPressure}" data-id="${s.id}" data-param="tankPressure">
-            </div>
-            ${!isSolid ? `
-            <div class="row">
-              <div class="row-label">
-                <span>Burn time</span>
-                <span class="val" id="v-burntime-${s.id}">${s.burnTime} s</span>
-              </div>
-              <input type="range" min="30" max="600" step="10" value="${s.burnTime}"
-                data-id="${s.id}" data-param="burnTime">
-            </div>` : ''}
+            ${!p.solid ? liquidAdvanced(s, '') : ''}
           </div>
         </div>
       </div>`;
@@ -101,7 +117,6 @@ export function renderBoosterSection() {
   const bst     = state.boosters;
   const hasBoost = bst.count > 0;
   const p       = PROPS[bst.propellant];
-  const isSolid = p.solid;
 
   cont.innerHTML = `
     <div class="section-label">Side Boosters</div>
@@ -158,15 +173,20 @@ export function renderBoosterSection() {
               ${materialOptions(bst.tankMaterial)}
             </select>
           </div>
+          ${!p.solid ? `
+          <div class="row">
+            <div class="row-label"><span>Engine cycle</span></div>
+            <select class="prop-select" id="s-boost-enginetype">
+              ${engineTypeOptions(bst.engineType)}
+            </select>
+          </div>
           <div class="row">
             <div class="row-label">
-              <span>Tank pressure</span>
-              <span class="val" id="v-boost-pressure">${bst.tankPressure} bar</span>
+              <span>Thrust / engine</span>
+              <span class="val" id="v-boost-thrust">${bst.thrustPerEngine} kN</span>
             </div>
-            <input type="range" min="1" max="${isSolid ? 100 : 10}" step="${isSolid ? 5 : 0.5}"
-              value="${bst.tankPressure}" id="s-boost-pressure">
+            <input type="range" min="10" max="5000" step="10" value="${bst.thrustPerEngine}" id="s-boost-thrust">
           </div>
-          ${!isSolid ? `
           <div class="row">
             <div class="row-label">
               <span>Burn time</span>
@@ -203,32 +223,35 @@ export function renderBoosterSection() {
     document.getElementById('v-boost-fill').textContent = Math.round(+e.target.value * 100) + '%';
     update();
   });
-  document.getElementById('s-boost-pressure').addEventListener('input', e => {
-    state.boosters.tankPressure = +e.target.value;
-    document.getElementById('v-boost-pressure').textContent = e.target.value + ' bar';
-    update();
-  });
-  const boostBurntime = document.getElementById('s-boost-burntime');
-  if (boostBurntime) {
-    boostBurntime.addEventListener('input', e => {
-      state.boosters.burnTime = +e.target.value;
-      document.getElementById('v-boost-burntime').textContent = e.target.value + ' s';
-      update();
-    });
-  }
-  document.getElementById('btn-adv-toggle-boost').addEventListener('click', () => {
-    advancedOpen['booster'] = !advancedOpen['booster'];
-    document.getElementById('card-adv-boost').style.display = advancedOpen['booster'] ? '' : 'none';
-    document.querySelector('#btn-adv-toggle-boost .adv-chevron').textContent = advancedOpen['booster'] ? '▴' : '▾';
-  });
   document.getElementById('s-boost-prop').addEventListener('change', e => {
     state.boosters.propellant = e.target.value;
-    state.boosters.tankPressure = PROPS[e.target.value].defaultPressure;
     renderBoosterSection();
     update();
   });
   document.getElementById('s-boost-material').addEventListener('change', e => {
     state.boosters.tankMaterial = e.target.value;
     update();
+  });
+
+  if (p.solid) return;
+
+  document.getElementById('s-boost-enginetype').addEventListener('change', e => {
+    state.boosters.engineType = e.target.value;
+    update();
+  });
+  document.getElementById('s-boost-thrust').addEventListener('input', e => {
+    state.boosters.thrustPerEngine = +e.target.value;
+    document.getElementById('v-boost-thrust').textContent = e.target.value + ' kN';
+    update();
+  });
+  document.getElementById('s-boost-burntime').addEventListener('input', e => {
+    state.boosters.burnTime = +e.target.value;
+    document.getElementById('v-boost-burntime').textContent = e.target.value + ' s';
+    update();
+  });
+  document.getElementById('btn-adv-toggle-boost').addEventListener('click', () => {
+    advancedOpen['booster'] = !advancedOpen['booster'];
+    document.getElementById('card-adv-boost').style.display = advancedOpen['booster'] ? '' : 'none';
+    document.querySelector('#btn-adv-toggle-boost .adv-chevron').textContent = advancedOpen['booster'] ? '▴' : '▾';
   });
 }

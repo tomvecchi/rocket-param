@@ -1,31 +1,38 @@
 import { G0, PROPS } from '../config/propellants.js';
 import { TANK_MATERIALS } from '../config/materials.js';
+import { ENGINE_TYPES, SOLID_CASE_PRESSURE } from '../config/engines.js';
 import { state } from './state.js';
 
 const TANK_SF = 1.5; // aerospace pressure vessel safety factor
 
 // Barlow's formula for cylindrical tank + hemispherical caps, normalised by propellant mass.
-// Returns { tank, engine, other, total } — all dimensionless fractions of propellant mass.
+// Returns { tank, engine, other, total, engineCount } — sigmas are dimensionless mass fractions.
 export function calcSigma(stage, stageIndex) {
   const prop = PROPS[stage.propellant];
   const mat  = TANK_MATERIALS[stage.tankMaterial];
-  const P    = stage.tankPressure * 1e5; // bar → Pa
   const { diameter: d, height: h, fill } = stage;
 
-  // Tank mass / propellant mass via Barlow (cylinder + 2 hemispheres = cylinder + sphere of radius r)
+  const tankPressure = prop.solid
+    ? SOLID_CASE_PRESSURE
+    : ENGINE_TYPES[stage.engineType].tankPressure;
+  const P = tankPressure * 1e5; // bar → Pa
+
   const tank = (2 * P * TANK_SF * (mat.rho / mat.sigmaY) * (h + d))
              / (prop.density * fill * h);
 
-  let engine = 0;
-  if (!prop.solid && prop.engineTW) {
+  let engine = 0, engineCount = null;
+  if (!prop.solid) {
+    const { engineTW } = ENGINE_TYPES[stage.engineType];
     const isp = stageIndex === 0 ? prop.isp_sl : prop.isp_vac;
-    // Engine mass = thrust / (engineTW × g0); thrust = propMass × g0 × isp / burnTime
-    // → engine / propMass = isp / (burnTime × engineTW)
-    engine = isp / (stage.burnTime * prop.engineTW);
+    engine = isp / (stage.burnTime * engineTW);
+    // Engine count: total thrust divided by thrust per engine
+    const propMass   = Math.PI * (d / 2) ** 2 * h * fill * prop.density;
+    const totalThrust = propMass * isp * G0 / stage.burnTime; // N
+    engineCount = totalThrust / (stage.thrustPerEngine * 1000);
   }
 
   const other = prop.sigmaOther;
-  return { tank, engine, other, total: tank + engine + other };
+  return { tank, engine, other, total: tank + engine + other, engineCount };
 }
 
 export function calcPhysics(payload = 0) {
@@ -75,7 +82,8 @@ export function calcPhysics(payload = 0) {
       count: n, p, sigma: sig, sigmaBreakdown, propMass, dryMass, wetMass,
       m0: m0b, m1: m1b, mr: m0b / m1b, isp, dv, thrust: thrustPerUnit,
       diameter: boosters.diameter, height: boosters.height,
-      propellant: boosters.propellant,
+      propellant: boosters.propellant, thrustPerEngine: boosters.thrustPerEngine,
+      tankMaterial: boosters.tankMaterial, engineType: boosters.engineType,
     };
   }
 
