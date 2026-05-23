@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rocket Designer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="logo">🚀</div>
+  <div>
+    <h1>ROCKET DESIGNER</h1>
+    <p>Interactive multistage spacecraft parameter explorer</p>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- LEFT: Configuration -->
+  <div class="panel">
+    <div class="panel-header">Configuration</div>
+    <div class="panel-scroll">
+      <div class="section">
+        <div class="section-label">Stages</div>
+        <div class="stage-buttons">
+          <button class="btn btn-add" id="btn-add">+ Add Stage</button>
+        </div>
+        <div id="stage-cards"></div>
+      </div>
+      <div class="section" id="booster-section"></div>
+    </div>
+  </div>
+
+  <!-- CENTER: Diagram -->
+  <div class="diagram-panel">
+    <canvas id="stars"></canvas>
+    <svg id="rocket-svg"></svg>
+    <div class="scale-bar" id="scale-bar"></div>
+  </div>
+
+  <!-- RIGHT: Performance -->
+  <div class="panel">
+    <div class="panel-header">Performance</div>
+    <div class="panel-scroll">
+      <div class="total-box">
+        <div class="total-label">ΔV Ceiling</div>
+        <div class="total-val" id="total-dv">—</div>
+        <div class="total-unit">km/s</div>
+      </div>
+      <div class="section">
+        <div class="section-label">Payload Capacity</div>
+        <div id="mission-bars"></div>
+      </div>
+      <div class="section">
+        <div class="section-label">Stage Breakdown</div>
+        <div id="stage-results"></div>
+      </div>
+      <div class="section">
+        <div class="section-label">Vehicle Summary</div>
+        <div class="summary-grid" id="vehicle-summary"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

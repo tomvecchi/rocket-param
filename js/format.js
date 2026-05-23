@@ -1,0 +1,15 @@
+export function fmass(kg) {
+  if (kg >= 1e6) return `${(kg / 1e6).toFixed(2)} kt`;
+  if (kg >= 1000) return `${(kg / 1000).toFixed(1)} t`;
+  return `${Math.round(kg)} kg`;
+}
+
+export function fdv(ms) {
+  return (ms / 1000).toFixed(2);
+}
+
+export function fthrust(n) {
+  if (n >= 1e6) return `${(n / 1e6).toFixed(2)} MN`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)} kN`;
+  return `${Math.round(n)} N`;
+}
