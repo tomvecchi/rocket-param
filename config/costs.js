@@ -7,6 +7,7 @@ export const PROP_COST = {
   'LOX/NH3':      0.24,   // 57% LOX, 43% NH3 @ $0.40
   'N2O4/UDMH':   18.40,   // 72% N2O4 @ $12, 28% UDMH @ $35
   'Solid':         8.00,   // HTPB solid
+  'H2O2/HTPB':         22,   // Both on the order of $20-25 so ratio doesn't matter much
   'Fluorine/LH2':  7.31,   // 87.5% F2 @ $8, 12.5% LH2 @ $2.50
 };
 
