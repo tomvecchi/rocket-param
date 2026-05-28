@@ -7,7 +7,7 @@ function stageUnitCost(s) {
   const otherCost  = (s.sigmaBreakdown.other * s.propMass) * OTHER_STRUCT_COST;
   let engineCost = 0;
   if (s.sigmaBreakdown.engineCount !== null) {
-    engineCost = Math.ceil(s.sigmaBreakdown.engineCount)
+    engineCost = s.sigmaBreakdown.engineCount
                * s.thrustPerEngine
                * ENGINE_COST_PER_KN[s.engineType];
   }

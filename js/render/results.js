@@ -45,13 +45,13 @@ export function renderResults(phys) {
         <div class="stat-item"><div class="sl">Thrust</div>    <div class="sv">${fthrust(s.thrust)}</div></div>
         <div class="stat-item"><div class="sl">σ total</div>  <div class="sv">${s.sigma.toFixed(3)}</div></div>
         ${s.sigmaBreakdown.engineCount !== null
-          ? `<div class="stat-item"><div class="sl">Engines</div>   <div class="sv">${Math.ceil(s.sigmaBreakdown.engineCount)} × ${s.thrustPerEngine} kN</div></div>`
+          ? `<div class="stat-item"><div class="sl">Engines</div>   <div class="sv">${s.sigmaBreakdown.engineCount} × ${s.thrustPerEngine} kN</div></div>`
           : ''}
       </div>
       <div class="sigma-breakdown sigma-breakdown-result">
-        <div class="sb-row"><span>σ tank</span><span class="sv">${s.sigmaBreakdown.tank.toFixed(4)}</span></div>
-        <div class="sb-row"><span>σ engine</span><span class="sv">${s.sigmaBreakdown.engine.toFixed(4)}</span></div>
-        <div class="sb-row"><span>σ other</span><span class="sv">${s.sigmaBreakdown.other.toFixed(4)}</span></div>
+        <div class="sb-row"><span>Tank</span>   <span class="sv">${fmass(s.sigmaBreakdown.tank   * s.propMass)}</span></div>
+        <div class="sb-row"><span>Engines</span><span class="sv">${fmass(s.sigmaBreakdown.engine * s.propMass)}</span></div>
+        <div class="sb-row"><span>Other</span>  <span class="sv">${fmass(s.sigmaBreakdown.other  * s.propMass)}</span></div>
       </div>
     </div>`;
   }).join('');
@@ -75,13 +75,13 @@ export function renderResults(phys) {
         <div class="stat-item"><div class="sl">Thrust (each)</div>   <div class="sv">${fthrust(br.thrust)}</div></div>
         <div class="stat-item"><div class="sl">σ total</div>         <div class="sv">${br.sigma.toFixed(3)}</div></div>
         ${br.sigmaBreakdown.engineCount !== null
-          ? `<div class="stat-item"><div class="sl">Engines (each)</div><div class="sv">${Math.ceil(br.sigmaBreakdown.engineCount)} × ${br.thrustPerEngine} kN</div></div>`
+          ? `<div class="stat-item"><div class="sl">Engines (each)</div><div class="sv">${br.sigmaBreakdown.engineCount} × ${br.thrustPerEngine} kN</div></div>`
           : ''}
       </div>
       <div class="sigma-breakdown sigma-breakdown-result">
-        <div class="sb-row"><span>σ tank</span><span class="sv">${br.sigmaBreakdown.tank.toFixed(4)}</span></div>
-        <div class="sb-row"><span>σ engine</span><span class="sv">${br.sigmaBreakdown.engine.toFixed(4)}</span></div>
-        <div class="sb-row"><span>σ other</span><span class="sv">${br.sigmaBreakdown.other.toFixed(4)}</span></div>
+        <div class="sb-row"><span>Tank</span>   <span class="sv">${fmass(br.sigmaBreakdown.tank   * br.propMass)}</span></div>
+        <div class="sb-row"><span>Engines</span><span class="sv">${fmass(br.sigmaBreakdown.engine * br.propMass)}</span></div>
+        <div class="sb-row"><span>Other</span>  <span class="sv">${fmass(br.sigmaBreakdown.other  * br.propMass)}</span></div>
       </div>
     </div>`;
   }

@@ -8,5 +8,9 @@ export const ENGINE_TYPES = {
   'pressure-fed':  { name: 'Pressure-fed',   tankPressure: 25, engineTW: 50  },
 };
 
+// Plumbing overhead fraction: each engine beyond the first adds this fraction of one engine's
+// mass to account for its own feed lines, valves, manifold, and ignition hardware.
+export const PLUMBING_FRAC = 0.15;
+
 // Solid motor case pressure (bar) — used in Barlow formula for the motor casing.
 export const SOLID_CASE_PRESSURE = 60;

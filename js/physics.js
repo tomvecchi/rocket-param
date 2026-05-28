@@ -1,6 +1,6 @@
 import { G0, PROPS } from '../config/propellants.js';
 import { TANK_MATERIALS } from '../config/materials.js';
-import { ENGINE_TYPES, SOLID_CASE_PRESSURE } from '../config/engines.js';
+import { ENGINE_TYPES, SOLID_CASE_PRESSURE, PLUMBING_FRAC } from '../config/engines.js';
 import { state } from './state.js';
 
 const TANK_SF = 1.5; // aerospace pressure vessel safety factor
@@ -23,12 +23,17 @@ export function calcSigma(stage, stageIndex) {
   let engine = 0, engineCount = null;
   if (!prop.solid) {
     const { engineTW } = ENGINE_TYPES[stage.engineType];
-    const isp = stageIndex === 0 ? prop.isp_sl : prop.isp_vac;
-    engine = isp / (stage.burnTime * engineTW);
-    // Engine count: total thrust divided by thrust per engine
-    const propMass   = Math.PI * (d / 2) ** 2 * h * fill * prop.density;
+    const isp         = stageIndex === 0 ? prop.isp_sl : prop.isp_vac;
+    const propMass    = Math.PI * (d / 2) ** 2 * h * fill * prop.density;
     const totalThrust = propMass * isp * G0 / stage.burnTime; // N
-    engineCount = totalThrust / (stage.thrustPerEngine * 1000);
+    // Round up: you must buy whole engines; any surplus thrust capacity is dead mass.
+    engineCount = Math.ceil(totalThrust / (stage.thrustPerEngine * 1000));
+    // Per-engine mass at rated thrust; if engineCount > raw count the engine is oversized,
+    // so this correctly scales mass with the (surplus) rated thrust rather than actual thrust.
+    const perEngineMass = (stage.thrustPerEngine * 1000) / (engineTW * G0); // kg
+    // Each engine beyond the first adds plumbing overhead (feed lines, valves, manifold).
+    const plumbingMass  = (engineCount - 1) * PLUMBING_FRAC * perEngineMass; // kg
+    engine = (engineCount * perEngineMass + plumbingMass) / propMass;
   }
 
   const other = prop.sigmaOther;
