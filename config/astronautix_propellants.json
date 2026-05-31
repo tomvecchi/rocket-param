@@ -1,0 +1,386 @@
+[
+  {
+    "name": "BrF5/Hydrazine",
+    "fuel_density_gcc": 1.008,
+    "oxidizer_density_gcc": 2.48,
+    "of_ratio": 3.35,
+    "isp_vac_s": 243.0,
+    "isp_sl_s": 243.0
+  },
+  {
+    "name": "BrF5/Hydyne",
+    "fuel_density_gcc": 0.86,
+    "oxidizer_density_gcc": 2.48,
+    "of_ratio": 3.85,
+    "isp_vac_s": 227.0,
+    "isp_sl_s": 227.0
+  },
+  {
+    "name": "BrF5/MMH",
+    "fuel_density_gcc": 0.88,
+    "oxidizer_density_gcc": 2.48,
+    "of_ratio": 3.55,
+    "isp_vac_s": 236.0,
+    "isp_sl_s": 236.0
+  },
+  {
+    "name": "BrF5/UDMH",
+    "fuel_density_gcc": 0.793,
+    "oxidizer_density_gcc": 2.48,
+    "of_ratio": 3.8,
+    "isp_vac_s": 231.0,
+    "isp_sl_s": 231.0
+  },
+  {
+    "name": "CF2/Hydrazine",
+    "fuel_density_gcc": 1.008,
+    "oxidizer_density_gcc": 1.52,
+    "of_ratio": 1.5,
+    "isp_vac_s": 321.0,
+    "isp_sl_s": 273
+  },
+  {
+    "name": "CF2/LH2",
+    "fuel_density_gcc": 0.071,
+    "oxidizer_density_gcc": 1.52,
+    "of_ratio": 6.0,
+    "isp_vac_s": 401.0,
+    "isp_sl_s": 341
+  },
+  {
+    "name": "ClF3/Hydrazine",
+    "fuel_density_gcc": 1.008,
+    "oxidizer_density_gcc": 1.83,
+    "of_ratio": 2.77,
+    "isp_vac_s": 338.0,
+    "isp_sl_s": 294.0
+  },
+  {
+    "name": "ClF3/Hydyne",
+    "fuel_density_gcc": 0.86,
+    "oxidizer_density_gcc": 1.83,
+    "of_ratio": 2.98,
+    "isp_vac_s": 321.0,
+    "isp_sl_s": 276.0
+  },
+  {
+    "name": "ClF3/Kerosene",
+    "fuel_density_gcc": 0.806,
+    "oxidizer_density_gcc": 1.83,
+    "of_ratio": 3.26,
+    "isp_vac_s": 301.0,
+    "isp_sl_s": 258.0
+  },
+  {
+    "name": "ClF3/UDMH",
+    "fuel_density_gcc": 0.793,
+    "oxidizer_density_gcc": 1.83,
+    "of_ratio": 3.03,
+    "isp_vac_s": 325.0,
+    "isp_sl_s": 280.0
+  },
+  {
+    "name": "ClO3F/Hydrazine",
+    "fuel_density_gcc": 1.008,
+    "oxidizer_density_gcc": 1.43,
+    "of_ratio": 1.42,
+    "isp_vac_s": 295.0,
+    "isp_sl_s": 295.0
+  },
+  {
+    "name": "ClO3F/Hydyne",
+    "fuel_density_gcc": 0.86,
+    "oxidizer_density_gcc": 1.43,
+    "of_ratio": 2.78,
+    "isp_vac_s": 285.0,
+    "isp_sl_s": 285.0
+  },
+  {
+    "name": "ClO3F/Kerosene",
+    "fuel_density_gcc": 0.806,
+    "oxidizer_density_gcc": 1.43,
+    "of_ratio": 4.23,
+    "isp_vac_s": 280.0,
+    "isp_sl_s": 280.0
+  },
+  {
+    "name": "ClO3F/MMH",
+    "fuel_density_gcc": 0.88,
+    "oxidizer_density_gcc": 1.43,
+    "of_ratio": 2.67,
+    "isp_vac_s": 291.0,
+    "isp_sl_s": 291.0
+  },
+  {
+    "name": "ClO3F/UDMH",
+    "fuel_density_gcc": 0.793,
+    "oxidizer_density_gcc": 1.43,
+    "of_ratio": 2.67,
+    "isp_vac_s": 288.0,
+    "isp_sl_s": 288.0
+  },
+  {
+    "name": "H2O2/Hydrazine",
+    "fuel_density_gcc": 1.008,
+    "oxidizer_density_gcc": 1.44,
+    "of_ratio": 2.01,
+    "isp_vac_s": 327.0,
+    "isp_sl_s": 282.0
+  },
+  {
+    "name": "H2O2/Hydyne",
+    "fuel_density_gcc": 0.86,
+    "oxidizer_density_gcc": 1.44,
+    "of_ratio": 4.68,
+    "isp_vac_s": 322.0,
+    "isp_sl_s": 276.0
+  },
+  {
+    "name": "H2O2/Kerosene",
+    "fuel_density_gcc": 0.806,
+    "oxidizer_density_gcc": 1.44,
+    "of_ratio": 7.07,
+    "isp_vac_s": 319.0,
+    "isp_sl_s": 273.0
+  },
+  {
+    "name": "H2O2/Solid",
+    "fuel_density_gcc": 1.35,
+    "oxidizer_density_gcc": 1.44,
+    "of_ratio": 0.84,
+    "isp_vac_s": 294.0,
+    "isp_sl_s": 250
+  },
+  {
+    "name": "H2O2/UDMH",
+    "fuel_density_gcc": 0.793,
+    "oxidizer_density_gcc": 1.44,
+    "of_ratio": 4.36,
+    "isp_vac_s": 325.0,
+    "isp_sl_s": 278.0
+  },
+  {
+    "name": "LF2/Ammonia",
+    "fuel_density_gcc": 0.604,
+    "oxidizer_density_gcc": 1.51,
+    "of_ratio": 3.15,
+    "isp_vac_s": 414.0,
+    "isp_sl_s": 357.0
+  },
+  {
+    "name": "LF2/Hydrazine",
+    "fuel_density_gcc": 1.008,
+    "oxidizer_density_gcc": 1.51,
+    "of_ratio": 2.18,
+    "isp_vac_s": 422.0,
+    "isp_sl_s": 363.0
+  },
+  {
+    "name": "LF2/Kerosene",
+    "fuel_density_gcc": 0.806,
+    "oxidizer_density_gcc": 1.51,
+    "of_ratio": 2.8,
+    "isp_vac_s": 380.0,
+    "isp_sl_s": 322.0
+  },
+  {
+    "name": "LF2/LH2",
+    "fuel_density_gcc": 0.071,
+    "oxidizer_density_gcc": 1.51,
+    "of_ratio": 8.0,
+    "isp_vac_s": 470.0,
+    "isp_sl_s": 410.0
+  },
+  {
+    "name": "LF2/UDMH",
+    "fuel_density_gcc": 0.793,
+    "oxidizer_density_gcc": 1.51,
+    "of_ratio": 2.55,
+    "isp_vac_s": 403.0,
+    "isp_sl_s": 341.0
+  },
+  {
+    "name": "Lox/Alcohol",
+    "fuel_density_gcc": 0.87,
+    "oxidizer_density_gcc": 1.14,
+    "of_ratio": 1.43,
+    "isp_vac_s": 338.0,
+    "isp_sl_s": 284.0
+  },
+  {
+    "name": "Lox/Ammonia",
+    "fuel_density_gcc": 0.604,
+    "oxidizer_density_gcc": 1.14,
+    "of_ratio": 1.4,
+    "isp_vac_s": 343.0,
+    "isp_sl_s": 294.0
+  },
+  {
+    "name": "Lox/Hydrazine",
+    "fuel_density_gcc": 1.008,
+    "oxidizer_density_gcc": 1.14,
+    "of_ratio": 0.9,
+    "isp_vac_s": 365.0,
+    "isp_sl_s": 313.0
+  },
+  {
+    "name": "Lox/Hydyne",
+    "fuel_density_gcc": 0.86,
+    "oxidizer_density_gcc": 1.14,
+    "of_ratio": 1.73,
+    "isp_vac_s": 359.0,
+    "isp_sl_s": 306.0
+  },
+  {
+    "name": "Lox/Kerosene",
+    "fuel_density_gcc": 0.806,
+    "oxidizer_density_gcc": 1.14,
+    "of_ratio": 2.56,
+    "isp_vac_s": 353.0,
+    "isp_sl_s": 300.0
+  },
+  {
+    "name": "Lox/LH2",
+    "fuel_density_gcc": 0.071,
+    "oxidizer_density_gcc": 1.14,
+    "of_ratio": 6.0,
+    "isp_vac_s": 451.0,
+    "isp_sl_s": 391.0
+  },
+  {
+    "name": "Lox/UDMH",
+    "fuel_density_gcc": 0.793,
+    "oxidizer_density_gcc": 1.14,
+    "of_ratio": 1.67,
+    "isp_vac_s": 363.0,
+    "isp_sl_s": 310.0
+  },
+  {
+    "name": "MON/Hydrazine",
+    "fuel_density_gcc": 1.008,
+    "oxidizer_density_gcc": 1.37,
+    "of_ratio": 1.4,
+    "isp_vac_s": 343.0,
+    "isp_sl_s": 295.0
+  },
+  {
+    "name": "MON/Hydyne",
+    "fuel_density_gcc": 0.86,
+    "oxidizer_density_gcc": 1.37,
+    "of_ratio": 2.84,
+    "isp_vac_s": 335.0,
+    "isp_sl_s": 287.0
+  },
+  {
+    "name": "MON/MMH",
+    "fuel_density_gcc": 0.88,
+    "oxidizer_density_gcc": 1.37,
+    "of_ratio": 2.27,
+    "isp_vac_s": 340.0,
+    "isp_sl_s": 292.0
+  },
+  {
+    "name": "MON/UDMH",
+    "fuel_density_gcc": 0.793,
+    "oxidizer_density_gcc": 1.37,
+    "of_ratio": 2.72,
+    "isp_vac_s": 338.0,
+    "isp_sl_s": 290.0
+  },
+  {
+    "name": "N2O4/Hydrazine",
+    "fuel_density_gcc": 1.008,
+    "oxidizer_density_gcc": 1.45,
+    "of_ratio": 1.34,
+    "isp_vac_s": 339.0,
+    "isp_sl_s": 292.0
+  },
+  {
+    "name": "N2O4/Hydyne",
+    "fuel_density_gcc": 0.86,
+    "oxidizer_density_gcc": 1.45,
+    "of_ratio": 2.71,
+    "isp_vac_s": 330.0,
+    "isp_sl_s": 282.0
+  },
+  {
+    "name": "N2O4/Kerosene",
+    "fuel_density_gcc": 0.806,
+    "oxidizer_density_gcc": 1.45,
+    "of_ratio": 4.04,
+    "isp_vac_s": 323.0,
+    "isp_sl_s": 276.0
+  },
+  {
+    "name": "N2O4/MMH",
+    "fuel_density_gcc": 0.88,
+    "oxidizer_density_gcc": 1.45,
+    "of_ratio": 2.16,
+    "isp_vac_s": 336.0,
+    "isp_sl_s": 288.0
+  },
+  {
+    "name": "N2O4/UDMH",
+    "fuel_density_gcc": 0.793,
+    "oxidizer_density_gcc": 1.45,
+    "of_ratio": 2.61,
+    "isp_vac_s": 333.0,
+    "isp_sl_s": 285.0
+  },
+  {
+    "name": "Nitric acid/Ammonia",
+    "fuel_density_gcc": 0.604,
+    "oxidizer_density_gcc": 1.51,
+    "of_ratio": 2.1,
+    "isp_vac_s": 255.0,
+    "isp_sl_s": 217
+  },
+  {
+    "name": "Nitric acid/Hydrazine",
+    "fuel_density_gcc": 1.008,
+    "oxidizer_density_gcc": 1.51,
+    "of_ratio": 1.45,
+    "isp_vac_s": 328.0,
+    "isp_sl_s": 283.0
+  },
+  {
+    "name": "Nitric acid/Hydyne",
+    "fuel_density_gcc": 0.86,
+    "oxidizer_density_gcc": 1.51,
+    "of_ratio": 3.11,
+    "isp_vac_s": 320.0,
+    "isp_sl_s": 273.0
+  },
+  {
+    "name": "Nitric acid/JP-X",
+    "fuel_density_gcc": 0.9,
+    "oxidizer_density_gcc": 1.51,
+    "of_ratio": 4.13,
+    "isp_vac_s": 315.0,
+    "isp_sl_s": 269.0
+  },
+  {
+    "name": "Nitric acid/Kerosene",
+    "fuel_density_gcc": 0.806,
+    "oxidizer_density_gcc": 1.51,
+    "of_ratio": 4.8,
+    "isp_vac_s": 314.0,
+    "isp_sl_s": 268.0
+  },
+  {
+    "name": "Nitric acid/MMH",
+    "fuel_density_gcc": 0.88,
+    "oxidizer_density_gcc": 1.51,
+    "of_ratio": 2.47,
+    "isp_vac_s": 326.0,
+    "isp_sl_s": 279.0
+  },
+  {
+    "name": "Nitric acid/UDMH",
+    "fuel_density_gcc": 0.793,
+    "oxidizer_density_gcc": 1.51,
+    "of_ratio": 3.0,
+    "isp_vac_s": 323.0,
+    "isp_sl_s": 276.0
+  }
+]
