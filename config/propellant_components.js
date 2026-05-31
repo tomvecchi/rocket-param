@@ -1,0 +1,117 @@
+// Separate fuel and oxidiser definitions, with combination data (Isp, O/F) derived from
+// astronautix.com propellant dataset plus LOX/LCH4 added manually.
+
+const SOLID_PROPS = {
+  isp_sl: 250, isp_vac: 270, density: 1750,
+  color: '#f87171', name: 'HTPB Solid', abbrev: 'SRB',
+  solid: true, sigmaOther: 0.04,
+};
+
+export const OXIDISERS = {
+  Solid:      { name: 'HTPB Solid', density_gcc: null,  color: '#f87171', solid: true  },
+  Lox:        { name: 'LOX',        density_gcc: 1.14,  color: '#1d4ed8'               },
+  N2O4:       { name: 'N₂O₄',       density_gcc: 1.45,  color: '#dc2626'               },
+  H2O2:       { name: 'H₂O₂',       density_gcc: 1.44,  color: '#0e7490'               },
+  MON:        { name: 'MON',        density_gcc: 1.37,  color: '#b91c1c'               },
+  NitricAcid: { name: 'HNO₃',       density_gcc: 1.51,  color: '#b45309'               },
+  LF2:        { name: 'LF₂',        density_gcc: 1.51,  color: '#7e22ce'               },
+  CF2:        { name: 'CF₂',        density_gcc: 1.52,  color: '#4c1d95'               },
+  ClF3:       { name: 'ClF₃',       density_gcc: 1.83,  color: '#7f1d1d'               },
+  ClO3F:      { name: 'ClO₃F',      density_gcc: 1.43,  color: '#881337'               },
+  BrF5:       { name: 'BrF₅',       density_gcc: 2.48,  color: '#7c2d12'               },
+};
+
+export const FUELS = {
+  Kerosene:  { name: 'RP-1',    density_gcc: 0.806, color: '#fb923c', abbrev: 'RP-1'   },
+  LCH4:      { name: 'LCH₄',    density_gcc: 0.424, color: '#34d399', abbrev: 'LCH₄'   },
+  LH2:       { name: 'LH₂',     density_gcc: 0.071, color: '#60a5fa', abbrev: 'LH₂'    },
+  Ammonia:   { name: 'NH₃',     density_gcc: 0.604, color: '#86efac', abbrev: 'NH₃'    },
+  Alcohol:   { name: 'Alcohol', density_gcc: 0.870, color: '#fcd34d', abbrev: 'EtOH'   },
+  Hydyne:    { name: 'Hydyne',  density_gcc: 0.860, color: '#6ee7b7', abbrev: 'HYDYNE' },
+  'JP-X':    { name: 'JP-X',    density_gcc: 0.900, color: '#fbbf24', abbrev: 'JP-X'   },
+  UDMH:      { name: 'UDMH',    density_gcc: 0.793, color: '#c084fc', abbrev: 'UDMH'   },
+  MMH:       { name: 'MMH',     density_gcc: 0.880, color: '#d8b4fe', abbrev: 'MMH'    },
+  Hydrazine: { name: 'N₂H₄',    density_gcc: 1.008, color: '#4ade80', abbrev: 'N₂H₄'   },
+  Solid:     { name: 'HTPB',    density_gcc: 1.350, color: '#94a3b8', abbrev: 'HTPB'   },
+  LLi:       { name: 'Lithium', density_gcc: 6.940, color: '#d31737', abbrev: 'Li'     },
+};
+
+export const COMBINATIONS = {
+  'Lox/LH2':              { isp_sl: 391, isp_vac: 451, of_ratio: 6.00 },
+  'Lox/LCH4':             { isp_sl: 330, isp_vac: 380, of_ratio: 3.55 },
+  'Lox/Kerosene':         { isp_sl: 300, isp_vac: 353, of_ratio: 2.56 },
+  'Lox/Ammonia':          { isp_sl: 294, isp_vac: 343, of_ratio: 1.40 },
+  'Lox/Hydrazine':        { isp_sl: 313, isp_vac: 365, of_ratio: 0.90 },
+  'Lox/Hydyne':           { isp_sl: 306, isp_vac: 359, of_ratio: 1.73 },
+  'Lox/Alcohol':          { isp_sl: 284, isp_vac: 338, of_ratio: 1.43 },
+  'Lox/UDMH':             { isp_sl: 310, isp_vac: 363, of_ratio: 1.67 },
+  'N2O4/UDMH':            { isp_sl: 285, isp_vac: 333, of_ratio: 2.61 },
+  'N2O4/MMH':             { isp_sl: 288, isp_vac: 336, of_ratio: 2.16 },
+  'N2O4/Hydrazine':       { isp_sl: 292, isp_vac: 339, of_ratio: 1.34 },
+  'N2O4/Hydyne':          { isp_sl: 282, isp_vac: 330, of_ratio: 2.71 },
+  'N2O4/Kerosene':        { isp_sl: 276, isp_vac: 323, of_ratio: 4.04 },
+  'H2O2/Hydrazine':       { isp_sl: 282, isp_vac: 327, of_ratio: 2.01 },
+  'H2O2/Hydyne':          { isp_sl: 276, isp_vac: 322, of_ratio: 4.68 },
+  'H2O2/Kerosene':        { isp_sl: 273, isp_vac: 319, of_ratio: 7.07 },
+  'H2O2/UDMH':            { isp_sl: 278, isp_vac: 325, of_ratio: 4.36 },
+  'H2O2/Solid':           { isp_sl: 250, isp_vac: 294, of_ratio: 0.84, sigmaOther: 0.05 },
+  'MON/Hydrazine':        { isp_sl: 295, isp_vac: 343, of_ratio: 1.40 },
+  'MON/MMH':              { isp_sl: 292, isp_vac: 340, of_ratio: 2.27 },
+  'MON/Hydyne':           { isp_sl: 287, isp_vac: 335, of_ratio: 2.84 },
+  'MON/UDMH':             { isp_sl: 290, isp_vac: 338, of_ratio: 2.72 },
+  'NitricAcid/Kerosene':  { isp_sl: 268, isp_vac: 314, of_ratio: 4.80 },
+  'NitricAcid/Hydyne':    { isp_sl: 273, isp_vac: 320, of_ratio: 3.11 },
+  'NitricAcid/UDMH':      { isp_sl: 276, isp_vac: 323, of_ratio: 3.00 },
+  'NitricAcid/MMH':       { isp_sl: 279, isp_vac: 326, of_ratio: 2.47 },
+  'NitricAcid/Hydrazine': { isp_sl: 283, isp_vac: 328, of_ratio: 1.45 },
+  'NitricAcid/Ammonia':   { isp_sl: 217, isp_vac: 255, of_ratio: 2.10 },
+  'NitricAcid/JP-X':      { isp_sl: 269, isp_vac: 315, of_ratio: 4.13 },
+  'LF2/LH2':              { isp_sl: 410, isp_vac: 470, of_ratio: 8.00 },
+  'LF2/LLi':              { isp_sl: 410, isp_vac: 458, of_ratio: 2.70, sigmaOther: 0.05 },
+  'LF2/Hydrazine':        { isp_sl: 363, isp_vac: 422, of_ratio: 2.18 },
+  'LF2/Ammonia':          { isp_sl: 357, isp_vac: 414, of_ratio: 3.15 },
+  'LF2/UDMH':             { isp_sl: 341, isp_vac: 403, of_ratio: 2.55 },
+  'LF2/Kerosene':         { isp_sl: 322, isp_vac: 380, of_ratio: 2.80 },
+  'CF2/LH2':              { isp_sl: 341, isp_vac: 401, of_ratio: 6.00 },
+  'CF2/Hydrazine':        { isp_sl: 273, isp_vac: 321, of_ratio: 1.50 },
+  'ClF3/Hydrazine':       { isp_sl: 294, isp_vac: 338, of_ratio: 2.77 },
+  'ClF3/Hydyne':          { isp_sl: 276, isp_vac: 321, of_ratio: 2.98 },
+  'ClF3/Kerosene':        { isp_sl: 258, isp_vac: 301, of_ratio: 3.26 },
+  'ClF3/UDMH':            { isp_sl: 280, isp_vac: 325, of_ratio: 3.03 },
+  'ClO3F/Hydrazine':      { isp_sl: 295, isp_vac: 295, of_ratio: 1.42 },
+  'ClO3F/Hydyne':         { isp_sl: 285, isp_vac: 285, of_ratio: 2.78 },
+  'ClO3F/Kerosene':       { isp_sl: 280, isp_vac: 280, of_ratio: 4.23 },
+  'ClO3F/MMH':            { isp_sl: 291, isp_vac: 291, of_ratio: 2.67 },
+  'ClO3F/UDMH':           { isp_sl: 288, isp_vac: 288, of_ratio: 2.67 },
+  'BrF5/Hydrazine':       { isp_sl: 243, isp_vac: 243, of_ratio: 3.35 },
+  'BrF5/MMH':             { isp_sl: 236, isp_vac: 236, of_ratio: 3.55 },
+  'BrF5/Hydyne':          { isp_sl: 227, isp_vac: 227, of_ratio: 3.85 },
+  'BrF5/UDMH':            { isp_sl: 231, isp_vac: 231, of_ratio: 3.80 },
+};
+
+// Returns a prop object with the same shape as PROPS entries in propellants.js.
+export function resolveProp(oxidiser, fuel) {
+  if (OXIDISERS[oxidiser]?.solid) return SOLID_PROPS;
+  const ox   = OXIDISERS[oxidiser];
+  const f    = FUELS[fuel];
+  const comb = COMBINATIONS[`${oxidiser}/${fuel}`];
+  if (!ox || !f || !comb) throw new Error(`Unknown combination: ${oxidiser}/${fuel}`);
+
+  const { isp_sl, isp_vac, of_ratio, sigmaOther = 0.02 } = comb;
+  const rhoF  = f.density_gcc;
+  const rhoOx = ox.density_gcc;
+  const density   = (1 + of_ratio) / (1 / rhoF + of_ratio / rhoOx) * 1000;
+  const oxVolFrac = (of_ratio / rhoOx) / (of_ratio / rhoOx + 1 / rhoF);
+
+  return {
+    isp_sl, isp_vac, of_ratio, sigmaOther, density, oxVolFrac,
+    color:     f.color,
+    oxColor:   ox.color,
+    fuelColor: f.color,
+    name:      `${f.name} / ${ox.name}`,
+    abbrev:    f.abbrev,
+    oxName:    ox.name,
+    fuelName:  f.name,
+    solid:     false,
+  };
+}
