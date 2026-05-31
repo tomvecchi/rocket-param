@@ -1,10 +1,16 @@
-import { PROPS } from '../config/propellants.js';
-import { PROP_COST, TANK_COST, ENGINE_COST_PER_KN, OTHER_STRUCT_COST } from '../config/costs.js';
+import { OX_COST, FUEL_COST, SOLID_PROP_COST, TANK_COST, ENGINE_COST_PER_KN, OTHER_STRUCT_COST } from '../config/costs.js';
 
 function stageUnitCost(s) {
-  const propCost   = s.propMass * PROP_COST[s.propellant];
-  const tankCost   = (s.sigmaBreakdown.tank * s.propMass) * TANK_COST[s.tankMaterial];
-  const otherCost  = (s.sigmaBreakdown.other * s.propMass) * OTHER_STRUCT_COST;
+  let propCost;
+  if (s.p.solid) {
+    propCost = s.propMass * SOLID_PROP_COST;
+  } else {
+    const of     = s.p.of_ratio;
+    const oxFrac = of / (1 + of);
+    propCost = s.propMass * (oxFrac * OX_COST[s.oxidiser] + (1 - oxFrac) * FUEL_COST[s.fuel]);
+  }
+  const tankCost  = (s.sigmaBreakdown.tank  * s.propMass) * TANK_COST[s.tankMaterial];
+  const otherCost = (s.sigmaBreakdown.other * s.propMass) * OTHER_STRUCT_COST;
   let engineCost = 0;
   if (s.sigmaBreakdown.engineCount !== null) {
     engineCost = s.sigmaBreakdown.engineCount
@@ -27,10 +33,10 @@ export function calcCost(phys) {
     const c  = stageUnitCost(br);
     const n  = br.count;
     booster  = {
-      propCost:  c.propCost  * n,
-      tankCost:  c.tankCost  * n,
+      propCost:   c.propCost   * n,
+      tankCost:   c.tankCost   * n,
       engineCost: c.engineCost * n,
-      otherCost: c.otherCost * n,
+      otherCost:  c.otherCost  * n,
       total: (c.propCost + c.tankCost + c.engineCost + c.otherCost) * n,
     };
   }

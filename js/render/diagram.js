@@ -1,4 +1,3 @@
-import { PROPS } from '../../config/propellants.js';
 import { state } from '../state.js';
 
 export function initStars() {
@@ -98,7 +97,7 @@ export function renderSVG(phys) {
   </linearGradient>`;
 
   if (boostVisCount > 0) {
-    const bp = PROPS[bst.propellant];
+    const bp = phys.booster.p;
     const bc = bp.color;
     html += `<linearGradient id="gboost" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%"   stop-color="${bc}" stop-opacity=".08"/>
@@ -178,7 +177,7 @@ export function renderSVG(phys) {
           dominant-baseline="middle">STAGE ${i + 1}</text>`;
         html += `<text x="${cx}" y="${midY + fsize * 0.9}" text-anchor="middle"
           fill="${c}99" font-size="${fsize * 0.8}" font-family="monospace"
-          dominant-baseline="middle">${s.propellant}</text>`;
+          dominant-baseline="middle">${s.p.abbrev}</text>`;
       } else {
         html += `<text x="${cx + w/2 + 7}" y="${midY}" dominant-baseline="middle"
           fill="${c}" font-size="10" font-family="monospace">S${i+1}</text>`;
@@ -272,7 +271,7 @@ export function renderSVG(phys) {
 
   // Side boosters
   if (boostVisCount > 0) {
-    const bp    = PROPS[bst.propellant];
+    const bp    = phys.booster.p;
     const bc    = bp.color;
     const bW    = bst.diameter * scale;
     const bH    = bst.height   * scale;
@@ -356,7 +355,7 @@ export function renderSVG(phys) {
     }
 
     if (bst.count > 2) {
-      const bc = PROPS[bst.propellant].color;
+      const bc = phys.booster.p.color;
       html += `<text x="${positions[0] - 5}" y="${stage0BodyY + stage0BodyH/2}"
         text-anchor="end" dominant-baseline="middle"
         fill="${bc}cc" font-size="11" font-family="monospace" font-weight="700">×${bst.count}</text>`;
@@ -394,7 +393,7 @@ export function renderSVG(phys) {
       fill="${cc}cc" font-size="${cfs}" font-family="monospace" font-weight="700">S1</text>`;
 
     if (hasBst) {
-      const bp     = PROPS[bst.propellant];
+      const bp     = phys.booster.p;
       const bc     = bp.color;
       const boostR = (bst.diameter / 2) * ts;
       const dist   = (coreD / 2 + gapPhys + bst.diameter / 2) * ts;

@@ -1,3 +1,4 @@
+import { OXIDISERS, FUELS, COMBINATIONS } from '../config/propellant_components.js';
 import { state, advancedOpen, getNextId } from './state.js';
 import { renderCards, renderBoosterSection } from './render/cards.js';
 import { update } from './update.js';
@@ -7,7 +8,8 @@ export function setupEvents() {
     if (state.stages.length >= 5) return;
     state.stages.push({
       id: getNextId(),
-      propellant: 'LOX/RP-1',
+      oxidiser: 'Lox',
+      fuel: 'Kerosene',
       diameter: 3.7,
       height: 15,
       fill: 0.85,
@@ -49,8 +51,17 @@ export function setupEvents() {
     const s = state.stages.find(x => x.id === id);
     if (!s) return;
 
-    if (param === 'prop') {
-      s.propellant = el.value;
+    if (param === 'oxidiser') {
+      const newOx = el.value;
+      s.oxidiser = newOx;
+      if (OXIDISERS[newOx]?.solid) {
+        s.fuel = null;
+      } else if (!COMBINATIONS[`${newOx}/${s.fuel}`]) {
+        s.fuel = Object.keys(FUELS).find(fk => COMBINATIONS[`${newOx}/${fk}`]) || null;
+      }
+      renderCards();
+    } else if (param === 'fuel') {
+      s.fuel = el.value;
       renderCards();
     } else if (param === 'tankMaterial') {
       s.tankMaterial = el.value;

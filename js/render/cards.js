@@ -1,4 +1,4 @@
-import { PROPS } from '../../config/propellants.js';
+import { OXIDISERS, FUELS, COMBINATIONS, resolveProp } from '../../config/propellant_components.js';
 import { TANK_MATERIALS } from '../../config/materials.js';
 import { ENGINE_TYPES } from '../../config/engines.js';
 import { state, advancedOpen } from '../state.js';
@@ -14,6 +14,21 @@ function engineTypeOptions(selected) {
   return Object.entries(ENGINE_TYPES).map(([key, e]) =>
     `<option value="${key}" ${key === selected ? 'selected' : ''}>${e.name}</option>`
   ).join('');
+}
+
+function oxidiserOptions(selected) {
+  return Object.entries(OXIDISERS).map(([key, ox]) =>
+    `<option value="${key}" ${key === selected ? 'selected' : ''}>${ox.name}</option>`
+  ).join('');
+}
+
+function fuelOptions(oxidiser, selected) {
+  return Object.keys(FUELS)
+    .filter(fk => COMBINATIONS[`${oxidiser}/${fk}`])
+    .map(fk => {
+      const f = FUELS[fk];
+      return `<option value="${fk}" ${fk === selected ? 'selected' : ''}>${f.name}</option>`;
+    }).join('');
 }
 
 function liquidAdvanced(s, isSuffix) {
@@ -48,8 +63,9 @@ export function renderCards() {
   const { stages } = state;
 
   cont.innerHTML = stages.map((s, i) => {
-    const p       = PROPS[s.propellant];
-    const open    = advancedOpen[s.id] || false;
+    const p    = resolveProp(s.oxidiser, s.fuel);
+    const open = advancedOpen[s.id] || false;
+    const isSolid = OXIDISERS[s.oxidiser]?.solid === true;
 
     return `
       <div class="stage-card" data-id="${s.id}">
@@ -63,11 +79,12 @@ export function renderCards() {
             ${stages.length <= 1 ? 'disabled' : ''} title="Remove stage">×</button>
         </div>
         <div class="card-body">
-          <select class="prop-select" data-id="${s.id}" data-param="prop">
-            ${Object.entries(PROPS).map(([key, pp]) =>
-              `<option value="${key}" ${key === s.propellant ? 'selected' : ''}>${pp.name}</option>`
-            ).join('')}
+          <select class="prop-select" data-id="${s.id}" data-param="oxidiser">
+            ${oxidiserOptions(s.oxidiser)}
           </select>
+          ${!isSolid ? `<select class="prop-select" data-id="${s.id}" data-param="fuel">
+            ${fuelOptions(s.oxidiser, s.fuel)}
+          </select>` : ''}
           <div class="row">
             <div class="row-label">
               <span>Diameter</span>
@@ -102,7 +119,7 @@ export function renderCards() {
                 ${materialOptions(s.tankMaterial)}
               </select>
             </div>
-            ${!p.solid ? liquidAdvanced(s, '') : ''}
+            ${!isSolid ? liquidAdvanced(s, '') : ''}
           </div>
         </div>
       </div>`;
@@ -114,9 +131,10 @@ export function renderCards() {
 export function renderBoosterSection() {
   const cont    = document.getElementById('booster-section');
   if (!cont) return;
-  const bst     = state.boosters;
+  const bst      = state.boosters;
   const hasBoost = bst.count > 0;
-  const p       = PROPS[bst.propellant];
+  const p        = resolveProp(bst.oxidiser, bst.fuel);
+  const isSolid  = OXIDISERS[bst.oxidiser]?.solid === true;
 
   cont.innerHTML = `
     <div class="section-label">Side Boosters</div>
@@ -137,11 +155,12 @@ export function renderBoosterSection() {
         <span class="card-sub">${p.name}</span>
       </div>
       <div class="card-body">
-        <select class="prop-select" id="s-boost-prop">
-          ${Object.entries(PROPS).map(([key, pp]) =>
-            `<option value="${key}" ${key === bst.propellant ? 'selected' : ''}>${pp.name}</option>`
-          ).join('')}
+        <select class="prop-select" id="s-boost-oxidiser">
+          ${oxidiserOptions(bst.oxidiser)}
         </select>
+        ${!isSolid ? `<select class="prop-select" id="s-boost-fuel">
+          ${fuelOptions(bst.oxidiser, bst.fuel)}
+        </select>` : ''}
         <div class="row">
           <div class="row-label">
             <span>Diameter</span>
@@ -173,7 +192,7 @@ export function renderBoosterSection() {
               ${materialOptions(bst.tankMaterial)}
             </select>
           </div>
-          ${!p.solid ? `
+          ${!isSolid ? `
           <div class="row">
             <div class="row-label"><span>Engine cycle</span></div>
             <select class="prop-select" id="s-boost-enginetype">
@@ -223,17 +242,37 @@ export function renderBoosterSection() {
     document.getElementById('v-boost-fill').textContent = Math.round(+e.target.value * 100) + '%';
     update();
   });
-  document.getElementById('s-boost-prop').addEventListener('change', e => {
-    state.boosters.propellant = e.target.value;
+  document.getElementById('s-boost-oxidiser').addEventListener('change', e => {
+    const newOx = e.target.value;
+    state.boosters.oxidiser = newOx;
+    if (OXIDISERS[newOx]?.solid) {
+      state.boosters.fuel = null;
+    } else if (!COMBINATIONS[`${newOx}/${state.boosters.fuel}`]) {
+      state.boosters.fuel = Object.keys(FUELS).find(fk => COMBINATIONS[`${newOx}/${fk}`]) || null;
+    }
     renderBoosterSection();
     update();
   });
+  const boostFuelEl = document.getElementById('s-boost-fuel');
+  if (boostFuelEl) {
+    boostFuelEl.addEventListener('change', e => {
+      state.boosters.fuel = e.target.value;
+      renderBoosterSection();
+      update();
+    });
+  }
   document.getElementById('s-boost-material').addEventListener('change', e => {
     state.boosters.tankMaterial = e.target.value;
     update();
   });
 
-  if (p.solid) return;
+  document.getElementById('btn-adv-toggle-boost').addEventListener('click', () => {
+    advancedOpen['booster'] = !advancedOpen['booster'];
+    document.getElementById('card-adv-boost').style.display = advancedOpen['booster'] ? '' : 'none';
+    document.querySelector('#btn-adv-toggle-boost .adv-chevron').textContent = advancedOpen['booster'] ? '▴' : '▾';
+  });
+
+  if (isSolid) return;
 
   document.getElementById('s-boost-enginetype').addEventListener('change', e => {
     state.boosters.engineType = e.target.value;
@@ -248,10 +287,5 @@ export function renderBoosterSection() {
     state.boosters.burnTime = +e.target.value;
     document.getElementById('v-boost-burntime').textContent = e.target.value + ' s';
     update();
-  });
-  document.getElementById('btn-adv-toggle-boost').addEventListener('click', () => {
-    advancedOpen['booster'] = !advancedOpen['booster'];
-    document.getElementById('card-adv-boost').style.display = advancedOpen['booster'] ? '' : 'none';
-    document.querySelector('#btn-adv-toggle-boost .adv-chevron').textContent = advancedOpen['booster'] ? '▴' : '▾';
   });
 }

@@ -1,18 +1,35 @@
-// Blended propellant cost ($/kg of mixture), derived from component costs
-// weighted by mass fraction at nominal O/F ratio.
-export const PROP_COST = {
-  'LOX/LH2':      0.46,   // 85.7% LOX @ $0.12, 14.3% LH2 @ $2.50
-  'LOX/CH4':      0.14,   // 78% LOX, 22% CH4 @ $0.20
-  'LOX/RP-1':     0.28,   // 73% LOX, 27% RP-1 @ $0.70
-  'LOX/NH3':      0.24,   // 57% LOX, 43% NH3 @ $0.40
-  'N2O4/UDMH':   18.40,   // 72% N2O4 @ $12, 28% UDMH @ $35
-  'Solid':         8.00,   // HTPB solid
-  'H2O2/HTPB':         22,   // Both on the order of $20-25 so ratio doesn't matter much
-  'Fluorine/LH2':  7.31,   // 87.5% F2 @ $8, 12.5% LH2 @ $2.50
+// Per-component propellant costs ($/kg), used to compute blended mixture cost at the O/F ratio.
+export const OX_COST = {
+  Lox:        0.12,
+  N2O4:      12.00,
+  H2O2:      25.00,   // 90% rocket grade
+  MON:       15.00,
+  NitricAcid: 2.00,
+  LF2:        8.00,
+  CF2:       50.00,
+  ClF3:      50.00,
+  ClO3F:     40.00,
+  BrF5:      80.00,
 };
 
+export const FUEL_COST = {
+  Kerosene:  0.70,
+  LCH4:      0.20,
+  LH2:       2.50,
+  Ammonia:   0.40,
+  Alcohol:   1.00,
+  Hydyne:   30.00,
+  'JP-X':   18.00,
+  UDMH:     35.00,
+  LLi:      25.80,
+  MMH:      40.00,
+  Hydrazine: 20.00,
+  Solid:     12.00,   // HTPB hybrid grain
+};
+
+export const SOLID_PROP_COST = 8.00;   // complete SRM grain (HTPB/AP composite) $/kg
+
 // Tank manufacturing cost ($/kg of tank structure).
-// Includes material, machining, welding, NDT, and tooling amortised over a production run.
 export const TANK_COST = {
   'Al-2219': 2_000,
   'Al-Li':   5_000,

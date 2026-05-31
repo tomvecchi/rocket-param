@@ -33,7 +33,7 @@ export function renderResults(phys) {
     return `<div class="stage-result">
       <div class="sr-head">
         <div class="dot" style="background:${c}"></div>
-        <span class="sr-name" style="color:${c}">Stage ${i + 1} · ${s.propellant}</span>
+        <span class="sr-name" style="color:${c}">Stage ${i + 1} · ${s.p.name}</span>
         <span class="sr-dv"   style="color:${c}">${fdv(s.dv)} km/s</span>
       </div>
       <div class="stat-grid">
@@ -63,7 +63,7 @@ export function renderResults(phys) {
     boosterCard = `<div class="stage-result">
       <div class="sr-head">
         <div class="dot" style="background:${c}"></div>
-        <span class="sr-name" style="color:${c}">Boosters ×${br.count} · ${br.propellant}</span>
+        <span class="sr-name" style="color:${c}">Boosters ×${br.count} · ${br.p.name}</span>
         <span class="sr-dv"   style="color:${c}">${fdv(br.dv)} km/s</span>
       </div>
       <div class="stat-grid">

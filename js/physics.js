@@ -1,6 +1,7 @@
-import { G0, PROPS } from '../config/propellants.js';
+import { G0 } from '../config/propellants.js';
 import { TANK_MATERIALS } from '../config/materials.js';
 import { ENGINE_TYPES, SOLID_CASE_PRESSURE, PLUMBING_FRAC } from '../config/engines.js';
+import { resolveProp } from '../config/propellant_components.js';
 import { state } from './state.js';
 
 const TANK_SF = 1.5; // aerospace pressure vessel safety factor
@@ -8,7 +9,7 @@ const TANK_SF = 1.5; // aerospace pressure vessel safety factor
 // Barlow's formula for cylindrical tank + hemispherical caps, normalised by propellant mass.
 // Returns { tank, engine, other, total, engineCount } — sigmas are dimensionless mass fractions.
 export function calcSigma(stage, stageIndex) {
-  const prop = PROPS[stage.propellant];
+  const prop = resolveProp(stage.oxidiser, stage.fuel);
   const mat  = TANK_MATERIALS[stage.tankMaterial];
   const { diameter: d, height: h, fill } = stage;
 
@@ -44,7 +45,7 @@ export function calcPhysics(payload = 0) {
   const { stages, boosters } = state;
 
   const sd = stages.map((s, i) => {
-    const p              = PROPS[s.propellant];
+    const p              = resolveProp(s.oxidiser, s.fuel);
     const sigmaBreakdown = calcSigma(s, i);
     const sigma          = sigmaBreakdown.total;
     const propVol        = Math.PI * (s.diameter / 2) ** 2 * s.height * s.fill;
@@ -70,7 +71,7 @@ export function calcPhysics(payload = 0) {
   let boosterResult = null;
   if (boosters.count > 0) {
     const n              = boosters.count;
-    const p              = PROPS[boosters.propellant];
+    const p              = resolveProp(boosters.oxidiser, boosters.fuel);
     const sigmaBreakdown = calcSigma(boosters, 0);
     const sig            = sigmaBreakdown.total;
     const propVol  = Math.PI * (boosters.diameter / 2) ** 2 * boosters.height * boosters.fill;
@@ -86,8 +87,9 @@ export function calcPhysics(payload = 0) {
     boosterResult = {
       count: n, p, sigma: sig, sigmaBreakdown, propMass, dryMass, wetMass,
       m0: m0b, m1: m1b, mr: m0b / m1b, isp, dv, thrust: thrustPerUnit,
+      oxidiser: boosters.oxidiser, fuel: boosters.fuel,
       diameter: boosters.diameter, height: boosters.height,
-      propellant: boosters.propellant, thrustPerEngine: boosters.thrustPerEngine,
+      thrustPerEngine: boosters.thrustPerEngine,
       tankMaterial: boosters.tankMaterial, engineType: boosters.engineType,
     };
   }
