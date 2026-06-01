@@ -60,7 +60,7 @@ header p { font-size: 12px; color: var(--muted); margin-top: 1px; }
 
 .panel-header {
   flex-shrink: 0;
-  padding: 9px 14px;
+  padding: 6px 14px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   font-size: 10px;
@@ -68,7 +68,21 @@ header p { font-size: 12px; color: var(--muted); margin-top: 1px; }
   letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
+.header-actions { display: flex; gap: 6px; }
+.btn-io {
+  font-size: 10px;
+  padding: 3px 9px;
+  color: var(--muted);
+  border-color: var(--border);
+  background: transparent;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.btn-io:hover { color: var(--accent); border-color: var(--accent); background: transparent; }
 
 .panel-scroll {
   flex: 1;

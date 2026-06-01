@@ -14,3 +14,4 @@ export const advancedOpen = {};
 
 let _nextId = 3;
 export const getNextId = () => _nextId++;
+export const resetNextId = ids => { _nextId = Math.max(...ids) + 1; };

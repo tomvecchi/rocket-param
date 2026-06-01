@@ -12,7 +12,14 @@
 
   <!-- LEFT: Configuration -->
   <div class="panel">
-    <div class="panel-header">Configuration</div>
+    <div class="panel-header">
+      Configuration
+      <div class="header-actions">
+        <button class="btn btn-io" id="btn-save" title="Save configuration to JSON">Save</button>
+        <button class="btn btn-io" id="btn-load" title="Load configuration from JSON">Load</button>
+        <input type="file" id="file-input" accept=".json" style="display:none">
+      </div>
+    </div>
     <div class="panel-scroll">
       <div class="section">
         <div class="section-label">Stages</div>
