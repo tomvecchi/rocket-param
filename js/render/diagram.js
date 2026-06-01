@@ -1,5 +1,153 @@
 import { state } from '../state.js';
 
+// Returns [{x, y, ring}] in normalised "ring-spacing = 1" coordinates.
+// Ring 0 = centre engine; ring k holds floor(2π·k) engines evenly spaced.
+function computeEnginePositions(count) {
+  const positions = [];
+  let remaining = count;
+  for (let ring = 0; remaining > 0; ring++) {
+    const cap = ring === 0 ? 1 : Math.floor(2 * Math.PI * ring);
+    const n   = Math.min(remaining, cap);
+    if (ring === 0) {
+      positions.push({ x: 0, y: 0, ring: 0 });
+    } else {
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * 2 * Math.PI - Math.PI / 2;
+        positions.push({ x: ring * Math.cos(a), y: ring * Math.sin(a), ring });
+      }
+    }
+    remaining -= n;
+  }
+  return positions;
+}
+
+// Returns how many engine bells are visible in the side-on rocket diagram.
+// Logic: each ring that has >=3 engines contributes 2 visible bells (left + right extreme);
+// the centre engine (ring 0) contributes 1. For <=3 engines the raw count is returned.
+function sideViewBells(engineCount) {
+  if (!engineCount || engineCount <= 0) return 1;  // solid / unknown → single nozzle
+  if (engineCount <= 3) return engineCount;
+  const positions = computeEnginePositions(engineCount);
+  const ringPop = {};
+  for (const p of positions) ringPop[p.ring] = (ringPop[p.ring] || 0) + 1;
+  let outerRing = 0;
+  for (const [r, n] of Object.entries(ringPop)) {
+    if (n >= 3) outerRing = Math.max(outerRing, Number(r));
+  }
+  return 2 * outerRing + 1;
+}
+
+// Renders a right-side column of top-down cross-section insets, one per stage + booster.
+function renderTopViews(W, H, phys) {
+  const { stages } = phys;
+  const hasBst  = phys.booster !== null;
+  const numViews = stages.length + (hasBst ? 1 : 0);
+  if (numViews === 0) return '';
+
+  const gap    = 6;
+  const maxSz  = 110;
+  const minSz  = 56;
+  const availH = H * 0.92;
+  const sz     = Math.max(minSz, Math.min(maxSz,
+                   Math.floor((availH - gap * (numViews - 1)) / numViews)));
+  const totalH = numViews * sz + (numViews - 1) * gap;
+  const ix     = W - sz - 10;
+  const startY = (H - totalH) / 2;
+
+  // Build view descriptors: top stage first, then lower stages, then booster.
+  const views = [
+    ...[...stages].reverse().map((s, vi) => ({
+      s,
+      label:  `S${stages.length - vi}`,
+      isVac:  stages.length - 1 - vi > 0,  // vacuum engines for upper stages
+    })),
+    ...(hasBst ? [{ s: phys.booster, label: `B×${phys.booster.count}`, isVac: false }] : []),
+  ];
+
+  let out = '';
+  const lfsBase  = Math.max(6, sz * 0.092);
+  const labelH   = lfsBase + 5;
+
+  views.forEach(({ s, label, isVac }, vi) => {
+    const iy   = startY + vi * (sz + gap);
+    const icx  = ix + sz / 2;
+    const icy  = iy + labelH + (sz - labelH) / 2;
+    const tankR = (sz - labelH) / 2 - 4;
+    const c    = s.p.color;
+
+    // Background
+    out += `<rect x="${ix}" y="${iy}" width="${sz}" height="${sz}"
+      fill="#07090f" fill-opacity="0.93" stroke="#1e293b" stroke-width="1" rx="4"/>`;
+
+    // Tank outline
+    out += `<circle cx="${icx}" cy="${icy}" r="${tankR}"
+      fill="${c}12" stroke="${c}" stroke-width="1.4"/>`;
+
+    // Stage label
+    out += `<text x="${icx}" y="${iy + lfsBase + 1}" text-anchor="middle"
+      fill="${c}bb" font-size="${lfsBase}" font-family="monospace" font-weight="700">${label}</text>`;
+
+    const engCount = s.sigmaBreakdown?.engineCount;
+
+    if (s.p.solid) {
+      // Solid grain: concentric bands + central bore
+      for (let j = 1; j <= 3; j++) {
+        const br = tankR * (0.30 + j * 0.19);
+        out += `<circle cx="${icx}" cy="${icy}" r="${br}"
+          fill="none" stroke="${c}22" stroke-width="0.8"/>`;
+      }
+      out += `<circle cx="${icx}" cy="${icy}" r="${tankR * 0.25}"
+        fill="#0d1117" stroke="${c}55" stroke-width="0.8"/>`;
+
+    } else if (engCount && engCount > 0) {
+      const positions = computeEnginePositions(engCount);
+      const maxRing   = positions.reduce((m, p) => Math.max(m, p.ring), 0);
+
+      // Scale so outermost ring edge fits within tank (leave wall gap).
+      const posScale  = (tankR * 0.84) / Math.max(maxRing + 0.52, 0.52);
+
+      // Engine radius: proportional to sqrt(thrust), normalised to 800 kN reference.
+      const thrustFactor = Math.pow(Math.max(10, s.thrustPerEngine) / 800, 0.32);
+      const engineR = Math.min(
+        posScale * 0.44,                     // cap at 44% of ring spacing (no overlap)
+        Math.max(2.2, posScale * 0.38 * thrustFactor)
+      );
+
+      for (const p of positions) {
+        const ex = icx + p.x * posScale;
+        const ey = icy + p.y * posScale;
+
+        if (isVac) {
+          // Vacuum: dashed outer ring representing expanded nozzle bell
+          out += `<circle cx="${ex}" cy="${ey}" r="${engineR * 1.55}"
+            fill="none" stroke="${c}45" stroke-width="0.7" stroke-dasharray="2,1.5"/>`;
+        }
+        // Nozzle throat circle
+        out += `<circle cx="${ex}" cy="${ey}" r="${engineR}"
+          fill="${c}22" stroke="${c}" stroke-width="0.75"/>`;
+        // Chamber centre dot
+        out += `<circle cx="${ex}" cy="${ey}" r="${engineR * 0.38}"
+          fill="${c}95"/>`;
+      }
+
+      // Engine count badge (bottom-right)
+      const bfs = Math.max(6, sz * 0.085);
+      out += `<text x="${ix + sz - 4}" y="${iy + sz - 3}"
+        text-anchor="end" dominant-baseline="auto"
+        fill="${c}65" font-size="${bfs}" font-family="monospace">×${engCount}</text>`;
+
+    } else {
+      // Liquid but engineCount not yet calculated (edge case) — show crosshair
+      out += `<line x1="${icx - tankR*0.4}" y1="${icy}" x2="${icx + tankR*0.4}" y2="${icy}"
+        stroke="${c}35" stroke-width="0.8"/>`;
+      out += `<line x1="${icx}" y1="${icy - tankR*0.4}" x2="${icx}" y2="${icy + tankR*0.4}"
+        stroke="${c}35" stroke-width="0.8"/>`;
+    }
+  });
+
+  return out;
+}
+
 export function initStars() {
   const canvas = document.getElementById('stars');
   const panel  = canvas.parentElement;
@@ -239,7 +387,7 @@ export function renderSVG(phys) {
     if (i === 0) stage0BodyH = h;
 
     const engHpx  = s.diameter * 0.40 * scale;
-    const nEng    = Math.max(1, Math.min(9, Math.round(s.diameter * 1.2)));
+    const nEng    = sideViewBells(s.sigmaBreakdown?.engineCount);
     const engTW   = s.diameter * scale * 0.85;
     const cellW   = engTW / nEng;
     const gutter  = cellW * 0.12;
@@ -329,7 +477,7 @@ export function renderSVG(phys) {
       ].join(' ');
       html += `<path d="${bnPath}" fill="${bc}18" stroke="${bc}" stroke-width="1.2"/>`;
 
-      const nBEng   = Math.max(1, Math.min(4, Math.round(bst.diameter * 1.2)));
+      const nBEng   = sideViewBells(phys.booster.sigmaBreakdown?.engineCount);
       const bEngTW  = bW * 0.85;
       const bCellW  = bEngTW / nBEng;
       const bGutter = bCellW * 0.12;
@@ -362,52 +510,7 @@ export function renderSVG(phys) {
     }
   }
 
-  // Top-down cross-section inset (top-right corner)
-  {
-    const sz  = 134;
-    const pad = 15;
-    const ix  = W - sz - 12;
-    const iy  = 12;
-    const icx = ix + sz / 2;
-    const icy = iy + sz / 2;
-
-    const coreD  = stages[0].diameter;
-    const hasBst = bst.count > 0;
-    const span   = hasBst ? coreD + 2 * (gapPhys + bst.diameter) : coreD;
-    const ts     = (sz - 2 * pad) / span;
-    const coreR  = (coreD / 2) * ts;
-    const cc     = stages[0].p.color;
-
-    html += `<rect x="${ix}" y="${iy}" width="${sz}" height="${sz}"
-      fill="#07090f" fill-opacity="0.92" stroke="#1e293b" stroke-width="1" rx="5"/>`;
-    html += `<text x="${icx}" y="${iy + 10}" text-anchor="middle"
-      fill="#475569" font-size="7" font-family="monospace" letter-spacing="0.08em">TOP VIEW</text>`;
-
-    html += `<circle cx="${icx}" cy="${icy}" r="${coreR}" fill="${cc}20" stroke="${cc}" stroke-width="1.5"/>`;
-    html += `<line x1="${icx - coreR*0.45}" y1="${icy}" x2="${icx + coreR*0.45}" y2="${icy}"
-      stroke="${cc}40" stroke-width="0.8"/>`;
-    html += `<line x1="${icx}" y1="${icy - coreR*0.45}" x2="${icx}" y2="${icy + coreR*0.45}"
-      stroke="${cc}40" stroke-width="0.8"/>`;
-    const cfs = Math.max(6, Math.min(11, coreR * 0.65));
-    html += `<text x="${icx}" y="${icy}" text-anchor="middle" dominant-baseline="middle"
-      fill="${cc}cc" font-size="${cfs}" font-family="monospace" font-weight="700">S1</text>`;
-
-    if (hasBst) {
-      const bp     = phys.booster.p;
-      const bc     = bp.color;
-      const boostR = (bst.diameter / 2) * ts;
-      const dist   = (coreD / 2 + gapPhys + bst.diameter / 2) * ts;
-      const n      = bst.count;
-      for (let k = 0; k < n; k++) {
-        const angle = (k / n) * 2 * Math.PI - Math.PI / 2;
-        const bx    = icx + Math.cos(angle) * dist;
-        const by    = icy + Math.sin(angle) * dist;
-        html += `<circle cx="${bx}" cy="${by}" r="${boostR}" fill="${bc}20" stroke="${bc}" stroke-width="1.1"/>`;
-      }
-      html += `<text x="${ix + sz - 5}" y="${iy + sz - 5}" text-anchor="end"
-        dominant-baseline="auto" fill="${bc}80" font-size="8" font-family="monospace">×${n}</text>`;
-    }
-  }
+  html += renderTopViews(W, H, phys);
 
   el.innerHTML = html;
 }
