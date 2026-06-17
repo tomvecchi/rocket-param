@@ -510,6 +510,94 @@ export function renderSVG(phys) {
     }
   }
 
+  // To-scale astronaut (1.8 m tall) placed to the left of the rocket
+  {
+    const astroH  = 1.8 * scale;
+    const astroSW = astroH * 0.31;   // shoulder width ≈ 0.56 m
+    const groundY = y;
+    const aTop    = groundY - astroH;
+
+    const leftEdge = boostVisCount > 0
+      ? cx - stages[0].diameter * scale / 2 - gapPhys * scale - bst.diameter * scale
+      : cx - maxD * scale / 2;
+
+    // Place astronaut 58 px to the left of the rocket edge (clears dimension labels)
+    const aCX = leftEdge - 58 - astroSW / 2;
+
+    if (aCX - astroSW / 2 > 4 && aTop > 4) {
+      const sc = '#c8d8e8';   // suit
+      const hc = '#ddeeff';   // helmet shell
+      const vc = '#1a3050';   // visor
+      const dc = '#7a8fa8';   // dark trim
+
+      const headR  = astroH * 0.085;
+      const headCY = aTop + headR;
+      const neckH  = Math.max(1, astroH * 0.025);
+      const shldrY = headCY + headR + neckH;
+      const torsoH = astroH * 0.27;
+      const hipY   = shldrY + torsoH;
+      const legOff = astroSW * 0.20;
+      const armSX  = astroSW * 0.48;
+      const armExX = astroSW * 0.36;
+      const handY  = shldrY + astroH * 0.32;
+      const lw     = Math.max(1.5, astroSW * 0.21);
+
+      // Legs
+      html += `<line x1="${aCX - legOff}" y1="${hipY}" x2="${aCX - legOff}" y2="${groundY}"
+        stroke="${sc}" stroke-width="${lw}" stroke-linecap="round"/>`;
+      html += `<line x1="${aCX + legOff}" y1="${hipY}" x2="${aCX + legOff}" y2="${groundY}"
+        stroke="${sc}" stroke-width="${lw}" stroke-linecap="round"/>`;
+
+      // Boots
+      html += `<ellipse cx="${aCX - legOff}" cy="${groundY}" rx="${Math.max(2, astroSW * 0.16)}" ry="${Math.max(1, astroH * 0.022)}" fill="${dc}"/>`;
+      html += `<ellipse cx="${aCX + legOff}" cy="${groundY}" rx="${Math.max(2, astroSW * 0.16)}" ry="${Math.max(1, astroH * 0.022)}" fill="${dc}"/>`;
+
+      // Arms
+      const aw = Math.max(1.2, lw * 0.88);
+      html += `<line x1="${aCX - armSX}" y1="${shldrY}" x2="${aCX - armExX}" y2="${handY}"
+        stroke="${sc}" stroke-width="${aw}" stroke-linecap="round"/>`;
+      html += `<line x1="${aCX + armSX}" y1="${shldrY}" x2="${aCX + armExX}" y2="${handY}"
+        stroke="${sc}" stroke-width="${aw}" stroke-linecap="round"/>`;
+
+      // Torso
+      html += `<rect x="${aCX - astroSW / 2}" y="${shldrY}" width="${astroSW}" height="${torsoH}"
+        fill="${sc}" rx="${Math.max(1, astroSW * 0.12)}"/>`;
+
+      // Chest pack
+      const cpW = astroSW * 0.44, cpH = torsoH * 0.33;
+      html += `<rect x="${aCX - cpW / 2}" y="${shldrY + torsoH * 0.2}" width="${cpW}" height="${cpH}"
+        fill="${dc}" opacity="0.45" rx="1"/>`;
+
+      // Belt
+      html += `<rect x="${aCX - astroSW / 2 + 1}" y="${hipY - astroH * 0.022}"
+        width="${astroSW - 2}" height="${astroH * 0.032}" fill="${dc}" rx="1"/>`;
+
+      // Neck ring
+      const nkW = astroSW * 0.40;
+      html += `<rect x="${aCX - nkW / 2}" y="${headCY + headR}" width="${nkW}" height="${neckH}"
+        fill="${dc}" rx="1"/>`;
+
+      // Helmet
+      html += `<circle cx="${aCX}" cy="${headCY}" r="${headR}"
+        fill="${hc}" stroke="${dc}" stroke-width="${Math.max(0.7, headR * 0.08)}"/>`;
+
+      // Visor
+      const vW = headR * 1.18, vH = headR * 0.70;
+      html += `<ellipse cx="${aCX}" cy="${headCY + headR * 0.07}"
+        rx="${vW * 0.5}" ry="${vH * 0.5}" fill="${vc}" opacity="0.88"/>`;
+
+      if (headR > 4) {
+        html += `<ellipse cx="${aCX - vW * 0.14}" cy="${headCY - headR * 0.05}"
+          rx="${vW * 0.14}" ry="${vH * 0.21}" fill="white" opacity="0.28"/>`;
+      }
+
+      // "1.8m" label below feet
+      const lfs = Math.max(7, Math.min(9, scale * 0.11));
+      html += `<text x="${aCX}" y="${groundY + lfs + 4}"
+        text-anchor="middle" fill="#3a5878" font-size="${lfs}" font-family="monospace">1.8m</text>`;
+    }
+  }
+
   html += renderTopViews(W, H, phys);
 
   el.innerHTML = html;

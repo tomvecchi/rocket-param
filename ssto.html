@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SSTO Designer — Rocket Designer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    html, body { height: auto; overflow: auto; }
+    body { display: flex; flex-direction: column; }
+    #root { flex: 1; }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="logo">🚀</span>
+  <div>
+    <h1>ROCKET DESIGNER</h1>
+    <p>Single-stage-to-orbit design console</p>
+  </div>
+  <nav class="nav-links">
+    <a class="nav-link" href="index.html">Multi-Stage</a>
+    <a class="nav-link active" href="ssto.html">SSTO Designer</a>
+  </nav>
+</header>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script>
+  Babel.registerPreset('react-classic', {
+    presets: [[Babel.availablePresets['react'], { runtime: 'classic' }]]
+  });
+</script>
+
+<script type="text/babel" data-presets="react-classic">
+const { useState, useMemo } = React;
+
+const G0 = 9.80665;
+const ORBIT_BUDGET = 9400;
+
+const PROPELLANTS = {
+  LH2: {
+    label: "LH2 / LOX",
+    blurb: "Hydrolox — highest Isp, but liquid hydrogen is extremely low density (bulky tanks).",
+    isp: 450,
+    of: 6.0,
+    rhoFuel: 71,
+    rhoOx: 1141,
+    fuelName: "LH2",
+  },
+  CH4: {
+    label: "CH4 / LOX",
+    blurb: "Methalox — strong balance of Isp and density; clean-burning and reusable-friendly.",
+    isp: 380,
+    of: 3.6,
+    rhoFuel: 423,
+    rhoOx: 1141,
+    fuelName: "CH4",
+  },
+  RP1: {
+    label: "RP1 / LOX",
+    blurb: "Kerolox — dense propellant means compact tanks, at the cost of lower Isp.",
+    isp: 355,
+    of: 2.56,
+    rhoFuel: 810,
+    rhoOx: 1141,
+    fuelName: "RP1",
+  },
+};
+
+const COL = {
+  fuel: "#5fd3e8",
+  payload: "#ffb454",
+  ox: "#5b8dd6",
+};
+
+const cbrt = (x) => Math.cbrt(Math.max(0, x));
+const fmt = (n, d = 0) =>
+  isFinite(n)
+    ? n.toLocaleString("en-US", { maximumFractionDigits: d, minimumFractionDigits: d })
+    : "—";
+
+function SSTODesigner() {
+  const [dryMass, setDryMass] = useState(15000);
+  const [propMass, setPropMass] = useState(250000);
+  const [payloadMass, setPayloadMass] = useState(5000);
+  const [propType, setPropType] = useState("CH4");
+  const [coneAngle, setConeAngle] = useState(8);
+  const [payloadDensity, setPayloadDensity] = useState(1000);
+  const [tipRatio, setTipRatio] = useState(0.12);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const d = useMemo(() => {
+    const p = PROPELLANTS[propType];
+
+    const fuelMass = propMass / (1 + p.of);
+    const oxMass = propMass - fuelMass;
+
+    const vFuel = fuelMass / p.rhoFuel;
+    const vOx = oxMass / p.rhoOx;
+    const vPay = payloadMass / Math.max(1, payloadDensity);
+    const vReq = vFuel + vOx + vPay;
+
+    const m0 = dryMass + payloadMass + propMass;
+    const mf = dryMass + payloadMass;
+    const ve = p.isp * G0;
+    const ratio = mf > 0 ? m0 / mf : Infinity;
+    const dv = mf > 0 && propMass > 0 ? ve * Math.log(ratio) : 0;
+    const orbit = dv >= ORBIT_BUDGET;
+    const margin = dv - ORBIT_BUDGET;
+
+    const theta = (coneAngle * Math.PI) / 180;
+    const tanT = Math.tan(theta);
+    const sinT = Math.sin(theta);
+    const cosT = Math.cos(theta);
+    const f = tipRatio;
+    const capVolFactor =
+      (Math.pow(f, 3) / Math.pow(cosT, 3)) * Math.pow(1 - sinT, 2) * (2 + sinT);
+    const K =
+      (Math.PI / 3) *
+      (((1 - f) * (1 + f + f * f)) / tanT + capVolFactor);
+    const Rb = vReq > 0 ? Math.pow(vReq / K, 1 / 3) : 0;
+    const Rt = f * Rb;
+    const Hf = (Rb * (1 - f)) / tanT;
+    const rho = Rt / cosT;
+    const capH = rho * (1 - sinT);
+    const zc = Hf - rho * sinT;
+    const totalH = Hf + capH;
+
+    const Rb3 = Rb * Rb * Rb;
+    const r1 = cbrt(Rb3 - (3 * vOx * tanT) / Math.PI);
+    const h1 = (Rb - r1) / tanT;
+    const r2 = cbrt(Rb3 - (3 * (vOx + vPay) * tanT) / Math.PI);
+    const h2 = (Rb - r2) / tanT;
+
+    return {
+      p, fuelMass, oxMass, vFuel, vOx, vPay, vReq,
+      m0, mf, ve, ratio, dv, orbit, margin,
+      Rb, Rt, Hf, totalH, r1, h1, r2, h2, theta, rho, zc, capH,
+    };
+  }, [dryMass, propMass, payloadMass, propType, coneAngle, payloadDensity, tipRatio]);
+
+  const VW = 380, VH = 470, baseY = 422, topPad = 38, centerX = 158;
+  const plotW = 200, plotH = baseY - topPad;
+  const scale =
+    d.Rb > 0 && d.totalH > 0
+      ? Math.min(plotW / (2 * d.Rb), plotH / d.totalH)
+      : 1;
+
+  const X = (x) => centerX + x * scale;
+  const Y = (y) => baseY - y * scale;
+  const pt = (x, y) => `${X(x).toFixed(2)},${Y(y).toFixed(2)}`;
+
+  const oxPoly = [pt(-d.Rb, 0), pt(-d.r1, d.h1), pt(d.r1, d.h1), pt(d.Rb, 0)].join(" ");
+  const payPoly = [pt(-d.r1, d.h1), pt(-d.r2, d.h2), pt(d.r2, d.h2), pt(d.r1, d.h1)].join(" ");
+  const fuelPoly = [pt(-d.r2, d.h2), pt(-d.Rt, d.Hf), pt(d.Rt, d.Hf), pt(d.r2, d.h2)].join(" ");
+
+  const N = 26;
+  const dome = [];
+  for (let i = 0; i <= N; i++) {
+    const a = Math.PI - d.theta + (i / N) * (2 * d.theta - Math.PI);
+    dome.push(pt(d.rho * Math.cos(a), d.zc + d.rho * Math.sin(a)));
+  }
+  const domePoly = dome.join(" ");
+
+  const outline = [
+    `M ${pt(-d.Rb, 0)}`,
+    `L ${pt(-d.Rt, d.Hf)}`,
+    ...dome.map((p) => `L ${p}`),
+    `L ${pt(d.Rb, 0)}`,
+    "Z",
+  ].join(" ");
+
+  const bandLabel = (y0, y1) => (Y(y0) - Y(y1)) > 16 ? (y0 + y1) / 2 : null;
+  const oxMid = bandLabel(0, d.h1);
+  const payMid = bandLabel(d.h1, d.h2);
+  const fuelMid = bandLabel(d.h2, d.totalH);
+
+  return (
+    <div className="ssto-root">
+      <style>{CSS}</style>
+
+      <header className="ssto-head">
+        <div>
+          <div className="ssto-eyebrow">SSTO DESIGN CONSOLE</div>
+          <h1 className="ssto-title">Single-Stage-to-Orbit Vehicle</h1>
+        </div>
+        <StatusPill orbit={d.orbit} margin={d.margin} dv={d.dv} />
+      </header>
+
+      <div className="ssto-grid">
+        <section className="ssto-panel">
+          <div className="panel-tag">INPUTS</div>
+
+          <Slider label="Dry mass" unit="kg" value={dryMass} set={setDryMass}
+            min={0} max={120000} step={500} />
+          <Slider label="Propellant mass" sub="fuel + oxidiser" unit="kg" value={propMass} set={setPropMass}
+            min={0} max={1000000} step={1000} />
+          <Slider label="Payload mass" unit="kg" value={payloadMass} set={setPayloadMass}
+            min={0} max={120000} step={250} />
+
+          <div className="field">
+            <div className="field-row">
+              <span className="field-label">Propellant type</span>
+            </div>
+            <div className="seg">
+              {Object.entries(PROPELLANTS).map(([k, v]) => (
+                <button
+                  key={k}
+                  className={"seg-btn" + (propType === k ? " on" : "")}
+                  onClick={() => setPropType(k)}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+            <p className="hint">{d.p.blurb}</p>
+            <div className="chiprow">
+              <span className="chip">Isp {d.p.isp}s</span>
+              <span className="chip">O/F {d.p.of}</span>
+              <span className="chip">{d.p.fuelName} ρ {d.p.rhoFuel}</span>
+              <span className="chip">LOX ρ {d.p.rhoOx}</span>
+            </div>
+          </div>
+
+          <Slider label="Cone half-angle" sub="from vertical axis" unit="°" value={coneAngle} set={setConeAngle}
+            min={1} max={45} step={0.5} dec={1} />
+
+          <button className="adv-toggle" onClick={() => setShowAdvanced((s) => !s)}>
+            {showAdvanced ? "▾" : "▸"} Assumptions
+          </button>
+          {showAdvanced && (
+            <div className="adv">
+              <Slider label="Payload density" unit="kg/m³" value={payloadDensity} set={setPayloadDensity}
+                min={100} max={2000} step={50} />
+              <Slider label="Nose tip ratio" sub="R_top / R_base" unit="" value={tipRatio} set={setTipRatio}
+                min={0.02} max={0.4} step={0.01} dec={2} />
+              <p className="hint">
+                Payload volume is inferred from an assumed packing density. The tip ratio
+                sets how far the cone is truncated before the rounded dome.
+              </p>
+            </div>
+          )}
+        </section>
+
+        <section className="ssto-panel vispanel">
+          <div className="panel-tag">VEHICLE CROSS-SECTION</div>
+          <svg viewBox={`0 0 ${VW} ${VH}`} className="rocket" role="img"
+            aria-label="Spacecraft cross section">
+            <defs>
+              <pattern id="grid" width="26" height="26" patternUnits="userSpaceOnUse">
+                <path d="M 26 0 L 0 0 0 26" fill="none" stroke="#1b2733" strokeWidth="0.6" />
+              </pattern>
+            </defs>
+            <rect x="0" y="0" width={VW} height={VH} fill="url(#grid)" opacity="0.5" />
+
+            <polygon points={oxPoly} fill={COL.ox} opacity="0.85" />
+            <polygon points={payPoly} fill={COL.payload} opacity="0.85" />
+            <polygon points={fuelPoly} fill={COL.fuel} opacity="0.85" />
+            <polygon points={domePoly} fill={COL.fuel} opacity="0.85" />
+
+            <line x1={X(-d.r1)} y1={Y(d.h1)} x2={X(d.r1)} y2={Y(d.h1)} className="sep" />
+            <line x1={X(-d.r2)} y1={Y(d.h2)} x2={X(d.r2)} y2={Y(d.h2)} className="sep" />
+
+            <path d={outline} fill="none" className="outline" />
+            <line x1={centerX} y1={Y(0)} x2={centerX} y2={Y(d.totalH)} className="axis" />
+
+            {fuelMid != null && <text x={centerX} y={Y(fuelMid)} className="blabel">FUEL · {d.p.fuelName}</text>}
+            {payMid != null && <text x={centerX} y={Y(payMid)} className="blabel dark">PAYLOAD</text>}
+            {oxMid != null && <text x={centerX} y={Y(oxMid)} className="blabel">OXIDISER · LOX</text>}
+
+            <g className="dim">
+              {(() => {
+                const dx = X(d.Rb) + 18;
+                return (
+                  <>
+                    <line x1={dx} y1={Y(0)} x2={dx} y2={Y(d.totalH)} />
+                    <line x1={dx - 4} y1={Y(0)} x2={dx + 4} y2={Y(0)} />
+                    <line x1={dx - 4} y1={Y(d.totalH)} x2={dx + 4} y2={Y(d.totalH)} />
+                    <text x={dx + 7} y={(Y(0) + Y(d.totalH)) / 2} className="dimtxt vert"
+                      transform={`rotate(-90 ${dx + 7} ${(Y(0) + Y(d.totalH)) / 2})`}>
+                      {fmt(d.totalH, 1)} m
+                    </text>
+                  </>
+                );
+              })()}
+            </g>
+
+            <g className="dim">
+              <line x1={X(-d.Rb)} y1={baseY + 14} x2={X(d.Rb)} y2={baseY + 14} />
+              <line x1={X(-d.Rb)} y1={baseY + 10} x2={X(-d.Rb)} y2={baseY + 18} />
+              <line x1={X(d.Rb)} y1={baseY + 10} x2={X(d.Rb)} y2={baseY + 18} />
+              <text x={centerX} y={baseY + 30} className="dimtxt">⌀ {fmt(2 * d.Rb, 1)} m base</text>
+            </g>
+          </svg>
+        </section>
+
+        <section className="ssto-panel">
+          <div className="panel-tag">PERFORMANCE</div>
+
+          <div className="dv-block">
+            <div className="dv-num" style={{ color: d.orbit ? "#7ee787" : "#ffb454" }}>
+              {fmt(d.dv)} <span className="dv-unit">m/s</span>
+            </div>
+            <div className="dv-sub">total Δv &nbsp;·&nbsp; {fmt(d.dv / 1000, 2)} km/s</div>
+
+            <div className="bar">
+              <div className="bar-fill"
+                style={{
+                  width: `${Math.min(100, (d.dv / 11000) * 100)}%`,
+                  background: d.orbit ? "#7ee787" : "#ffb454",
+                }} />
+              <div className="bar-mark" style={{ left: `${(ORBIT_BUDGET / 11000) * 100}%` }} />
+            </div>
+            <div className="bar-legend">
+              <span>0</span>
+              <span className="budget">LEO budget {fmt(ORBIT_BUDGET)} →</span>
+              <span>11k</span>
+            </div>
+            <div className="verdict" style={{ color: d.orbit ? "#7ee787" : "#ffb454" }}>
+              {d.orbit
+                ? `Reaches orbit — ${fmt(d.margin)} m/s margin to spare`
+                : `Insufficient — short of orbit by ${fmt(-d.margin)} m/s`}
+            </div>
+          </div>
+
+          <div className="readouts">
+            <Stat label="Wet mass (m₀)" value={`${fmt(d.m0)} kg`} />
+            <Stat label="Burnout mass (mf)" value={`${fmt(d.mf)} kg`} />
+            <Stat label="Mass ratio" value={fmt(d.ratio, 2)} />
+            <Stat label="Exhaust velocity" value={`${fmt(d.ve)} m/s`} />
+            <Stat label="Fuel mass" value={`${fmt(d.fuelMass)} kg`} dot={COL.fuel} />
+            <Stat label="Oxidiser mass" value={`${fmt(d.oxMass)} kg`} dot={COL.ox} />
+          </div>
+
+          <div className="panel-tag mt">DIMENSIONS</div>
+          <div className="readouts">
+            <Stat label="Overall height" value={`${fmt(d.totalH, 2)} m`} />
+            <Stat label="Base diameter" value={`${fmt(2 * d.Rb, 2)} m`} />
+            <Stat label="Top diameter" value={`${fmt(2 * d.Rt, 2)} m`} />
+            <Stat label="Internal volume" value={`${fmt(d.vReq, 1)} m³`} />
+            <Stat label="Fuel tank vol." value={`${fmt(d.vFuel, 1)} m³`} dot={COL.fuel} />
+            <Stat label="Oxidiser vol." value={`${fmt(d.vOx, 1)} m³`} dot={COL.ox} />
+            <Stat label="Payload bay vol." value={`${fmt(d.vPay, 1)} m³`} dot={COL.payload} />
+            <Stat label="Payload section ht." value={`${fmt(d.h2 - d.h1, 2)} m`} dot={COL.payload} />
+          </div>
+        </section>
+      </div>
+
+      <footer className="ssto-foot">
+        Δv via the Tsiolkovsky equation with nominal vacuum Isp. The ~9.4 km/s threshold
+        is orbital velocity (~7.8 km/s) plus typical gravity, drag and steering losses —
+        a planning figure, not a guarantee.
+      </footer>
+    </div>
+  );
+}
+
+function StatusPill({ orbit }) {
+  return (
+    <div className={"pill " + (orbit ? "ok" : "no")}>
+      <span className="dot" />
+      {orbit ? "ORBIT CAPABLE" : "SUBORBITAL"}
+    </div>
+  );
+}
+
+function Stat({ label, value, dot }) {
+  return (
+    <div className="stat">
+      <div className="stat-label">
+        {dot && <span className="sdot" style={{ background: dot }} />}
+        {label}
+      </div>
+      <div className="stat-val">{value}</div>
+    </div>
+  );
+}
+
+function Slider({ label, sub, unit, value, set, min, max, step, dec = 0 }) {
+  return (
+    <div className="field">
+      <div className="field-row">
+        <span className="field-label">
+          {label}
+          {sub && <span className="field-sub"> · {sub}</span>}
+        </span>
+        <span className="field-val">
+          <input
+            type="number"
+            className="num"
+            value={value}
+            min={min}
+            max={max}
+            step={step}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              set(isNaN(v) ? 0 : v);
+            }}
+          />
+          <span className="unit">{unit}</span>
+        </span>
+      </div>
+      <input
+        type="range"
+        className="ssto-range"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(e) => set(parseFloat(e.target.value))}
+      />
+    </div>
+  );
+}
+
+const CSS = `
+.ssto-root{
+  --bg:#07090f; --panel:#0d1117; --panel2:#0a0d14; --line:#1e293b;
+  --ink:#e2e8f0; --mut:#64748b; --cyan:#0ea5e9; --amber:#ffb454; --green:#7ee787;
+  font-family:'IBM Plex Mono',ui-monospace,monospace;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, #0d1829 0%, transparent 60%),
+    var(--bg);
+  color:var(--ink); padding:22px; min-height:100%;
+}
+.ssto-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;
+  flex-wrap:wrap;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--line);}
+.ssto-eyebrow{font-size:11px;letter-spacing:.28em;color:var(--cyan);margin-bottom:6px;}
+.ssto-title{font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:26px;
+  line-height:1.05;margin:0;letter-spacing:.01em;}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:2px;
+  font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:13px;letter-spacing:.12em;
+  border:1px solid;}
+.pill.ok{color:var(--green);border-color:#244a35;background:#0e1c14;}
+.pill.no{color:var(--amber);border-color:#4a3b22;background:#1c160e;}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:currentColor;
+  box-shadow:0 0 10px currentColor;}
+
+.ssto-grid{display:grid;grid-template-columns:1.05fr 0.95fr 1.05fr;gap:14px;}
+@media(max-width:900px){.ssto-grid{grid-template-columns:1fr;}}
+
+.ssto-panel{background:linear-gradient(180deg,var(--panel),var(--panel2));
+  border:1px solid var(--line);border-radius:4px;padding:16px;position:relative;}
+.panel-tag{font-size:10.5px;letter-spacing:.24em;color:var(--mut);margin-bottom:14px;}
+.panel-tag.mt{margin-top:20px;}
+.vispanel{display:flex;flex-direction:column;}
+
+.field{margin-bottom:16px;}
+.field-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;gap:8px;}
+.field-label{font-size:12.5px;color:var(--ink);}
+.field-sub{color:var(--mut);font-size:11px;}
+.field-val{display:inline-flex;align-items:baseline;gap:5px;}
+.num{width:92px;background:#07090f;border:1px solid var(--line);color:var(--cyan);
+  font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;text-align:right;
+  padding:3px 6px;border-radius:3px;}
+.num:focus{outline:none;border-color:var(--cyan);}
+.unit{font-size:11px;color:var(--mut);min-width:30px;}
+
+.ssto-range{-webkit-appearance:none;appearance:none;width:100%;height:3px;border-radius:3px;
+  background:var(--line);outline:none;}
+.ssto-range::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;
+  background:var(--cyan);cursor:pointer;border:2px solid #07090f;
+  box-shadow:0 0 8px rgba(14,165,233,.5);}
+.ssto-range::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--cyan);
+  cursor:pointer;border:2px solid #07090f;}
+
+.seg{display:flex;gap:6px;}
+.seg-btn{flex:1;padding:9px 4px;background:#07090f;border:1px solid var(--line);color:var(--mut);
+  font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:12px;letter-spacing:.04em;
+  border-radius:3px;cursor:pointer;transition:.15s;}
+.seg-btn:hover{border-color:#2c3e4f;color:var(--ink);}
+.seg-btn.on{background:#071824;border-color:var(--cyan);color:var(--cyan);
+  box-shadow:inset 0 0 14px rgba(14,165,233,.12);}
+.hint{font-size:11px;line-height:1.5;color:var(--mut);margin:9px 0 8px;}
+.chiprow{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{font-size:10.5px;color:var(--cyan);border:1px solid #122435;background:#071420;
+  padding:3px 7px;border-radius:2px;letter-spacing:.03em;}
+
+.adv-toggle{background:none;border:none;color:var(--mut);font-family:'IBM Plex Mono',monospace;
+  font-size:11.5px;letter-spacing:.06em;cursor:pointer;padding:4px 0;}
+.adv-toggle:hover{color:var(--cyan);}
+.adv{margin-top:10px;padding-top:12px;border-top:1px dashed var(--line);}
+
+.rocket{width:100%;height:auto;flex:1;}
+.outline{stroke:#cfe6ee;stroke-width:1.4;}
+.sep{stroke:#07090f;stroke-width:1.2;stroke-dasharray:3 3;opacity:.7;}
+.axis{stroke:#cfe6ee;stroke-width:.7;stroke-dasharray:2 4;opacity:.35;}
+.blabel{fill:#04121a;font-size:9.5px;font-weight:600;text-anchor:middle;
+  font-family:'Chakra Petch',sans-serif;letter-spacing:.06em;dominant-baseline:middle;}
+.blabel.dark{fill:#2a1c05;}
+.dim line{stroke:var(--mut);stroke-width:.9;}
+.dimtxt{fill:var(--mut);font-size:10.5px;text-anchor:middle;letter-spacing:.04em;}
+
+.dv-block{margin-bottom:18px;}
+.dv-num{font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:38px;line-height:1;}
+.dv-unit{font-size:16px;color:var(--mut);font-weight:500;}
+.dv-sub{font-size:11.5px;color:var(--mut);margin-top:4px;letter-spacing:.04em;}
+.bar{position:relative;height:9px;background:#07090f;border:1px solid var(--line);
+  border-radius:5px;margin-top:14px;overflow:visible;}
+.bar-fill{height:100%;border-radius:5px;transition:width .25s ease;}
+.bar-mark{position:absolute;top:-4px;width:2px;height:17px;background:var(--ink);opacity:.8;}
+.bar-legend{display:flex;justify-content:space-between;font-size:9.5px;color:var(--mut);
+  margin-top:6px;letter-spacing:.03em;}
+.bar-legend .budget{color:var(--ink);}
+.verdict{font-size:12px;margin-top:12px;font-weight:500;line-height:1.4;}
+
+.readouts{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:3px;overflow:hidden;}
+.stat{background:var(--panel2);padding:9px 11px;}
+.stat-label{font-size:10px;color:var(--mut);display:flex;align-items:center;gap:6px;
+  letter-spacing:.03em;}
+.sdot{width:7px;height:7px;border-radius:2px;flex-shrink:0;}
+.stat-val{font-size:14px;font-weight:600;color:var(--ink);margin-top:3px;}
+
+.ssto-foot{margin-top:16px;padding-top:12px;border-top:1px solid var(--line);
+  font-size:10.5px;color:var(--mut);line-height:1.6;}
+`;
+
+ReactDOM.createRoot(document.getElementById('root')).render(<SSTODesigner />);
+</script>
+
+</body>
+</html>
