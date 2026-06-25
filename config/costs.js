@@ -13,18 +13,24 @@ export const OX_COST = {
 };
 
 export const FUEL_COST = {
-  Kerosene:  0.70,
-  LCH4:      0.20,
-  LH2:       2.50,
-  Ammonia:   0.40,
-  Alcohol:   1.00,
-  Hydyne:   30.00,
-  'JP-X':   18.00,
-  UDMH:     35.00,
-  LLi:      25.80,
-  MMH:      40.00,
-  Hydrazine: 20.00,
-  Solid:     12.00,   // HTPB hybrid grain
+  Kerosene:    0.70,
+  LCH4:        0.20,
+  Ethane:      0.30,   // natural gas byproduct
+  Propane:     0.80,   // commodity LPG
+  Butane:      0.90,   // commodity LPG
+  Furfuryl:    2.00,   // bio-derived from furfural
+  Cyclopropane: 6.00,  // specialty chemical
+  Propyne:    10.00,   // methylacetylene, specialty chemical
+  LH2:         2.50,
+  Ammonia:     0.40,
+  Alcohol:     1.00,
+  Hydyne:     30.00,
+  'JP-X':     18.00,
+  UDMH:       35.00,
+  LLi:        25.80,
+  MMH:        40.00,
+  Hydrazine:  20.00,
+  Solid:      12.00,   // HTPB hybrid grain
 };
 
 export const SOLID_PROP_COST = 8.00;   // complete SRM grain (HTPB/AP composite) $/kg
