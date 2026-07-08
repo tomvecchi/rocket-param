@@ -10,6 +10,7 @@ const SOLID_PROPS = {
 export const OXIDISERS = {
   Solid:      { name: 'HTPB Solid', density_gcc: null,  color: '#f87171', solid: true  },
   Lox:        { name: 'LOX',        density_gcc: 1.14,  color: '#1d4ed8'               },
+  N2O:        { name: 'N₂O',        density_gcc: 1.22,  color: '#dcca26'               },
   N2O4:       { name: 'N₂O₄',       density_gcc: 1.45,  color: '#dc2626'               },
   H2O2:       { name: 'H₂O₂',       density_gcc: 1.44,  color: '#0e7490'               },
   MON:        { name: 'MON',        density_gcc: 1.37,  color: '#b91c1c'               },
@@ -24,7 +25,7 @@ export const OXIDISERS = {
 export const FUELS = {
   Kerosene:  { name: 'RP-1',    density_gcc: 0.806, color: '#fb923c', abbrev: 'RP-1'   },
   LCH4:      { name: 'LCH₄',    density_gcc: 0.424, color: '#34d399', abbrev: 'LCH₄'   },
-  Ethane:    { name: 'Ethane',  density_gcc: 0.544, color: '#34d39e', abbrev: 'Ethane' },
+  Ethane:    { name: 'Ethane',  density_gcc: 0.544, color: '#34d39e', abbrev: 'C₂H₆' },
   Propane:   { name: 'Propane', density_gcc: 0.582, color: '#34d3c6', abbrev: 'Propane'},
   Butane:    { name: 'Butane',  density_gcc: 0.573, color: '#34aed3', abbrev: 'Butane' },
   Furfuryl:  { name: 'Furfuryl',density_gcc: 1.126, color: '#b2dce9', abbrev: 'Furfuryl'},
@@ -79,6 +80,8 @@ export const COMBINATIONS = {
   'MON/MMH':              { isp_sl: 292, isp_vac: 340, of_ratio: 2.27 },
   'MON/Hydyne':           { isp_sl: 287, isp_vac: 335, of_ratio: 2.84 },
   'MON/UDMH':             { isp_sl: 290, isp_vac: 338, of_ratio: 2.72 },
+  'N2O/Ethane':           { isp_sl: 224, isp_vac: 266, of_ratio: 5.0  },
+  'N2O/Solid':            { isp_sl: 245, isp_vac: 275, of_ratio: 5.0, sigmaOther: 0.05 },
   'NitricAcid/Kerosene':  { isp_sl: 268, isp_vac: 314, of_ratio: 4.80 },
   'NitricAcid/Hydyne':    { isp_sl: 273, isp_vac: 320, of_ratio: 3.11 },
   'NitricAcid/UDMH':      { isp_sl: 276, isp_vac: 323, of_ratio: 3.00 },
@@ -86,6 +89,7 @@ export const COMBINATIONS = {
   'NitricAcid/Hydrazine': { isp_sl: 283, isp_vac: 328, of_ratio: 1.45 },
   'NitricAcid/Ammonia':   { isp_sl: 217, isp_vac: 255, of_ratio: 2.10 },
   'NitricAcid/JP-X':      { isp_sl: 269, isp_vac: 315, of_ratio: 4.13 },
+  'NitricAcid/Furfuryl':  { isp_sl: 280, isp_vac: 320, of_ratio: 2.7  },
   'LF2/LH2':              { isp_sl: 410, isp_vac: 470, of_ratio: 8.00 },
   'LF2/LLi':              { isp_sl: 410, isp_vac: 458, of_ratio: 2.70, sigmaOther: 0.05 },
   'LF2/Hydrazine':        { isp_sl: 363, isp_vac: 422, of_ratio: 2.18 },

@@ -5,6 +5,7 @@ export const OX_COST = {
   H2O2:      25.00,   // 90% rocket grade
   MON:       15.00,
   NitricAcid: 2.00,
+  N2O:        4.00,
   LF2:        8.00,
   CF2:       50.00,
   ClF3:      50.00,
