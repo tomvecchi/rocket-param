@@ -110,7 +110,10 @@ function SSTODesigner() {
   const [propMass, setPropMass] = useState(250000);
   const [payloadMass, setPayloadMass] = useState(5000);
   const [propType, setPropType] = useState("CH4");
-  const [coneAngle, setConeAngle] = useState(8);
+  const [coneAngleBottom, setConeAngleBottom] = useState(8);
+  const [coneAngleMid, setConeAngleMid] = useState(8);
+  const [coneAngleTop, setConeAngleTop] = useState(8);
+  const [payloadPos, setPayloadPos] = useState('mid');
   const [payloadDensity, setPayloadDensity] = useState(1000);
   const [tipRatio, setTipRatio] = useState(0.12);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -140,29 +143,44 @@ function SSTODesigner() {
     const orbit = dv >= ORBIT_BUDGET;
     const margin = dv - ORBIT_BUDGET;
 
-    const theta = (coneAngle * Math.PI) / 180;
-    const tanT = Math.tan(theta);
-    const sinT = Math.sin(theta);
-    const cosT = Math.cos(theta);
+    // Section stacking: bottom → mid → top
+    const [v1, v2, v3, col1, col2, col3, lab1, lab2, lab3] = payloadPos === 'mid'
+      ? [vOx, vPay, vFuel, COL.ox, COL.payload, COL.fuel,
+         'OXIDISER · LOX', 'PAYLOAD', `FUEL · ${p.fuelName}`]
+      : [vOx, vFuel, vPay, COL.ox, COL.fuel, COL.payload,
+         'OXIDISER · LOX', `FUEL · ${p.fuelName}`, 'PAYLOAD'];
+
+    const theta1 = (coneAngleBottom * Math.PI) / 180;
+    const theta2 = (coneAngleMid    * Math.PI) / 180;
+    const theta3 = (coneAngleTop    * Math.PI) / 180;
+    const tan1 = Math.tan(theta1), tan2 = Math.tan(theta2), tan3 = Math.tan(theta3);
+    const sin3 = Math.sin(theta3), cos3 = Math.cos(theta3);
     const f = tipRatio;
-    const capVolFactor =
-      (Math.pow(f, 3) / Math.pow(cosT, 3)) * Math.pow(1 - sinT, 2) * (2 + sinT);
-    const K =
-      (Math.PI / 3) *
-      (((1 - f) * (1 + f + f * f)) / tanT + capVolFactor);
-    const Rb = vReq > 0 ? Math.pow(vReq / K, 1 / 3) : 0;
+
+    // Generalised Rb: derived from requiring v1+v2+v3+V_cap = total volume
+    // Rb³ = (v1·tan1 + v2·tan2 + v3·tan3) / [(π/3)·((1−f³) + tan3·capVolFactor)]
+    const capVolFactor = (Math.pow(f, 3) / Math.pow(cos3, 3)) * Math.pow(1 - sin3, 2) * (2 + sin3);
+    const denom = (Math.PI / 3) * ((1 - Math.pow(f, 3)) + tan3 * capVolFactor);
+    const Rb = vReq > 0 && denom > 0
+      ? Math.cbrt((v1 * tan1 + v2 * tan2 + v3 * tan3) / denom)
+      : 0;
     const Rt = f * Rb;
-    const Hf = (Rb * (1 - f)) / tanT;
-    const rho = Rt / cosT;
-    const capH = rho * (1 - sinT);
-    const zc = Hf - rho * sinT;
+
+    // Section boundary radii and heights (bottom-up)
+    const rA = cbrt(Rb * Rb * Rb - (3 * v1 * tan1) / Math.PI);
+    const hA = tan1 > 0 ? (Rb - rA) / tan1 : 0;
+    const rB = cbrt(rA * rA * rA - (3 * v2 * tan2) / Math.PI);
+    const hB = hA + (tan2 > 0 ? (rA - rB) / tan2 : 0);
+    const Hf = hB + (tan3 > 0 ? (rB - Rt) / tan3 : 0);
+
+    // Dome cap geometry (tangent to top section at angle theta3)
+    const rho = Rt / cos3;
+    const capH = rho * (1 - sin3);
+    const zc = Hf - rho * sin3;
     const totalH = Hf + capH;
 
-    const Rb3 = Rb * Rb * Rb;
-    const r1 = cbrt(Rb3 - (3 * vOx * tanT) / Math.PI);
-    const h1 = (Rb - r1) / tanT;
-    const r2 = cbrt(Rb3 - (3 * (vOx + vPay) * tanT) / Math.PI);
-    const h2 = (Rb - r2) / tanT;
+    // Payload section height regardless of stack position
+    const payH = payloadPos === 'mid' ? (hB - hA) : (totalH - hB);
 
     // Mass budget estimation
     const eng = ENGINE_TYPES[engineType];
@@ -174,13 +192,15 @@ function SSTODesigner() {
     const mEngine = m0 * launchTwr / eng.engineTW;
 
     const aBase = Math.PI * Rb * Rb;
-    const slant = Math.sqrt((Rb - Rt) ** 2 + Hf ** 2);
-    const aSide = 0.5 * Math.PI * (Rb + Rt) * slant;
+    const slant1 = Math.sqrt((Rb - rA) ** 2 + hA ** 2);
+    const slant2 = Math.sqrt((rA - rB) ** 2 + (hB - hA) ** 2);
+    const slant3 = Math.sqrt((rB - Rt) ** 2 + (Hf - hB) ** 2);
+    const aSide = 0.5 * Math.PI * ((Rb + rA) * slant1 + (rA + rB) * slant2 + (rB + Rt) * slant3);
     const tpsArea = reentryMode === 'base' ? aBase : aSide;
     const mTps = TPS_PROFILES[tpsType].density * tpsArea;
 
-    const mLanding = 0.2 * (mTank + mEngine + mTps); // vague estimate based on Starship & Falcon 9 stats that recovery is ~20% of dry mass
-    const mOther = 0.25 * (mTank + mEngine + mTps); // random guesstimate for thrust structures etc
+    const mLanding = 0.2 * (mTank + mEngine + mTps);
+    const mOther = 0.25 * (mTank + mEngine + mTps);
 
     const mDryEst = mTank + mEngine + mTps + mLanding + mOther;
     const dryDelta = dryMass > 0 ? (mDryEst - dryMass) / dryMass : null;
@@ -188,11 +208,12 @@ function SSTODesigner() {
     return {
       p, fuelMass, oxMass, vFuel, vOx, vPay, vReq,
       m0, mf, ve, ratio, dv, orbit, margin,
-      Rb, Rt, Hf, totalH, r1, h1, r2, h2, theta, rho, zc, capH,
+      Rb, Rt, Hf, totalH, rA, hA, rB, hB, theta3, rho, zc, capH, payH,
+      col1, col2, col3, lab1, lab2, lab3,
       eng, mat, mTank, mEngine, mTps, mLanding, mOther, mDryEst, dryDelta,
     };
-  }, [dryMass, propMass, payloadMass, propType, coneAngle, payloadDensity, tipRatio,
-      engineType, tankMaterial, launchTwr, tpsType, reentryMode]);
+  }, [dryMass, propMass, payloadMass, propType, coneAngleBottom, coneAngleMid, coneAngleTop,
+      payloadPos, payloadDensity, tipRatio, engineType, tankMaterial, launchTwr, tpsType, reentryMode]);
 
   const VW = 380, VH = 470, baseY = 422, topPad = 38, centerX = 158;
   const plotW = 200, plotH = baseY - topPad;
@@ -205,30 +226,33 @@ function SSTODesigner() {
   const Y = (y) => baseY - y * scale;
   const pt = (x, y) => `${X(x).toFixed(2)},${Y(y).toFixed(2)}`;
 
-  const oxPoly = [pt(-d.Rb, 0), pt(-d.r1, d.h1), pt(d.r1, d.h1), pt(d.Rb, 0)].join(" ");
-  const payPoly = [pt(-d.r1, d.h1), pt(-d.r2, d.h2), pt(d.r2, d.h2), pt(d.r1, d.h1)].join(" ");
-  const fuelPoly = [pt(-d.r2, d.h2), pt(-d.Rt, d.Hf), pt(d.Rt, d.Hf), pt(d.r2, d.h2)].join(" ");
+  const poly1 = [pt(-d.Rb, 0), pt(-d.rA, d.hA), pt(d.rA, d.hA), pt(d.Rb, 0)].join(" ");
+  const poly2 = [pt(-d.rA, d.hA), pt(-d.rB, d.hB), pt(d.rB, d.hB), pt(d.rA, d.hA)].join(" ");
+  const poly3 = [pt(-d.rB, d.hB), pt(-d.Rt, d.Hf), pt(d.Rt, d.Hf), pt(d.rB, d.hB)].join(" ");
 
   const N = 26;
   const dome = [];
   for (let i = 0; i <= N; i++) {
-    const a = Math.PI - d.theta + (i / N) * (2 * d.theta - Math.PI);
+    const a = Math.PI - d.theta3 + (i / N) * (2 * d.theta3 - Math.PI);
     dome.push(pt(d.rho * Math.cos(a), d.zc + d.rho * Math.sin(a)));
   }
   const domePoly = dome.join(" ");
 
   const outline = [
     `M ${pt(-d.Rb, 0)}`,
-    `L ${pt(-d.Rt, d.Hf)}`,
+    `L ${pt(-d.rA, d.hA)}`,
+    `L ${pt(-d.rB, d.hB)}`,
     ...dome.map((p) => `L ${p}`),
+    `L ${pt(d.rB, d.hB)}`,
+    `L ${pt(d.rA, d.hA)}`,
     `L ${pt(d.Rb, 0)}`,
     "Z",
   ].join(" ");
 
   const bandLabel = (y0, y1) => (Y(y0) - Y(y1)) > 16 ? (y0 + y1) / 2 : null;
-  const oxMid = bandLabel(0, d.h1);
-  const payMid = bandLabel(d.h1, d.h2);
-  const fuelMid = bandLabel(d.h2, d.totalH);
+  const mid1 = bandLabel(0, d.hA);
+  const mid2 = bandLabel(d.hA, d.hB);
+  const mid3 = bandLabel(d.hB, d.totalH);
 
   return (
     <div className="ssto-root">
@@ -277,8 +301,29 @@ function SSTODesigner() {
             </div>
           </div>
 
-          <Slider label="Cone half-angle" sub="from vertical axis" unit="°" value={coneAngle} set={setConeAngle}
-            min={1} max={45} step={0.5} dec={1} />
+          <div className="field">
+            <div className="field-row">
+              <span className="field-label">Payload position</span>
+            </div>
+            <div className="seg">
+              <button className={"seg-btn" + (payloadPos === 'mid' ? " on" : "")}
+                onClick={() => setPayloadPos('mid')}>Mid-stack</button>
+              <button className={"seg-btn" + (payloadPos === 'top' ? " on" : "")}
+                onClick={() => setPayloadPos('top')}>Atop</button>
+            </div>
+            <p className="hint">
+              {payloadPos === 'mid'
+                ? 'Payload bay sits between oxidiser (bottom) and fuel (top).'
+                : 'Payload bay sits at the very top of the vehicle, above the fuel.'}
+            </p>
+          </div>
+
+          <Slider label="Bottom cone angle" sub="from vertical axis" unit="°" value={coneAngleBottom} set={setConeAngleBottom}
+            min={1} max={75} step={0.5} dec={1} />
+          <Slider label="Mid cone angle" sub="from vertical axis" unit="°" value={coneAngleMid} set={setConeAngleMid}
+            min={1} max={75} step={0.5} dec={1} />
+          <Slider label="Top cone angle" sub="from vertical axis" unit="°" value={coneAngleTop} set={setConeAngleTop}
+            min={1} max={75} step={0.5} dec={1} />
 
           <button className="adv-toggle" onClick={() => setShowAdvanced((s) => !s)}>
             {showAdvanced ? "▾" : "▸"} Assumptions
@@ -371,20 +416,20 @@ function SSTODesigner() {
             </defs>
             <rect x="0" y="0" width={VW} height={VH} fill="url(#grid)" opacity="0.5" />
 
-            <polygon points={oxPoly} fill={COL.ox} opacity="0.85" />
-            <polygon points={payPoly} fill={COL.payload} opacity="0.85" />
-            <polygon points={fuelPoly} fill={COL.fuel} opacity="0.85" />
-            <polygon points={domePoly} fill={COL.fuel} opacity="0.85" />
+            <polygon points={poly1} fill={d.col1} opacity="0.85" />
+            <polygon points={poly2} fill={d.col2} opacity="0.85" />
+            <polygon points={poly3} fill={d.col3} opacity="0.85" />
+            <polygon points={domePoly} fill={d.col3} opacity="0.85" />
 
-            <line x1={X(-d.r1)} y1={Y(d.h1)} x2={X(d.r1)} y2={Y(d.h1)} className="sep" />
-            <line x1={X(-d.r2)} y1={Y(d.h2)} x2={X(d.r2)} y2={Y(d.h2)} className="sep" />
+            <line x1={X(-d.rA)} y1={Y(d.hA)} x2={X(d.rA)} y2={Y(d.hA)} className="sep" />
+            <line x1={X(-d.rB)} y1={Y(d.hB)} x2={X(d.rB)} y2={Y(d.hB)} className="sep" />
 
             <path d={outline} fill="none" className="outline" />
             <line x1={centerX} y1={Y(0)} x2={centerX} y2={Y(d.totalH)} className="axis" />
 
-            {fuelMid != null && <text x={centerX} y={Y(fuelMid)} className="blabel">FUEL · {d.p.fuelName}</text>}
-            {payMid != null && <text x={centerX} y={Y(payMid)} className="blabel dark">PAYLOAD</text>}
-            {oxMid != null && <text x={centerX} y={Y(oxMid)} className="blabel">OXIDISER · LOX</text>}
+            {mid1 != null && <text x={centerX} y={Y(mid1)} className="blabel">{d.lab1}</text>}
+            {mid2 != null && <text x={centerX} y={Y(mid2)} className={`blabel${d.col2 === COL.payload ? ' dark' : ''}`}>{d.lab2}</text>}
+            {mid3 != null && <text x={centerX} y={Y(mid3)} className={`blabel${d.col3 === COL.payload ? ' dark' : ''}`}>{d.lab3}</text>}
 
             <g className="dim">
               {(() => {
@@ -459,7 +504,7 @@ function SSTODesigner() {
             <Stat label="Fuel tank vol." value={`${fmt(d.vFuel, 1)} m³`} dot={COL.fuel} />
             <Stat label="Oxidiser vol." value={`${fmt(d.vOx, 1)} m³`} dot={COL.ox} />
             <Stat label="Payload bay vol." value={`${fmt(d.vPay, 1)} m³`} dot={COL.payload} />
-            <Stat label="Payload section ht." value={`${fmt(d.h2 - d.h1, 2)} m`} dot={COL.payload} />
+            <Stat label="Payload section ht." value={`${fmt(d.payH, 2)} m`} dot={COL.payload} />
           </div>
 
           <div className="panel-tag mt">MASS BUDGET</div>
