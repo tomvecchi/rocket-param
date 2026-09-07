@@ -1,35 +1,61 @@
 import { MISSIONS } from '../../config/propellants.js';
 import { calcMaxPayload } from '../physics.js';
+import { ASCENT } from '../trajectory.js';
 import { calcCost } from '../cost.js';
 import { fmass, fdv, fthrust, fcost } from '../format.js';
 
 export function renderResults(phys) {
-  const { stages, totalDv, totalWet } = phys;
+  const { stages, totalDv, totalWet, traj, dvRequiredLeo } = phys;
 
   // ΔV ceiling (at zero payload)
   const tvEl  = document.getElementById('total-dv');
   const dvKms = totalDv / 1000;
   tvEl.textContent = dvKms.toFixed(2);
-  tvEl.style.color = dvKms >= MISSIONS[0].dv / 1000 ? '#10b981' : '#f59e0b';
+  const viable = totalDv >= dvRequiredLeo && !traj.overQ && !traj.cannotLift;
+  tvEl.style.color = viable ? '#10b981' : '#f59e0b';
 
   // Mission payload capacity cards
   document.getElementById('mission-bars').innerHTML =
     `<div class="mp-grid">${MISSIONS.map(m => {
-      const p  = calcMaxPayload(m.dv);
-      const ok = p !== null && p >= 1;
+      const r  = calcMaxPayload(m.dvBeyondLeo);
+      const ok = r.payload !== null && r.payload >= 1 && !r.overQ;
       const color = ok ? m.color : 'var(--muted)';
+      const note  = r.overQ      ? `max-Q ${(r.maxQ / 1000).toFixed(0)} kPa`
+                  : r.cannotLift ? 'T/W &lt; 1'
+                  : `≥ ${((dvRequiredLeo + m.dvBeyondLeo) / 1000).toFixed(1)} km/s`;
       return `<div class="mp-card" style="border-color:${ok ? m.color + '50' : 'var(--border)'}">
         <div class="mp-name" style="color:${color}">${m.name}</div>
-        <div class="mp-req">≥ ${(m.dv / 1000).toFixed(1)} km/s</div>
-        <div class="mp-mass" style="color:${color}">${ok ? fmass(p) : '—'}</div>
+        <div class="mp-req">${note}</div>
+        <div class="mp-mass" style="color:${color}">${ok ? fmass(r.payload) : '—'}</div>
       </div>`;
     }).join('')}</div>`;
+
+  // Ascent loss budget
+  const lossEl = document.getElementById('loss-budget');
+  if (lossEl) {
+    const warn = traj.cannotLift
+      ? '<div class="loss-warn">Thrust below weight at liftoff — vehicle cannot leave the pad.</div>'
+      : traj.overQ
+      ? `<div class="loss-warn">Max-Q ${(traj.maxQ / 1000).toFixed(0)} kPa exceeds the
+         ${(ASCENT.maxQLimit / 1000).toFixed(0)} kPa structural limit — reduce thrust
+         or extend burn time.</div>`
+      : '';
+    lossEl.innerHTML = `
+      <div class="stat-grid">
+        <div class="stat-item"><div class="sl">Liftoff T/W</div><div class="sv">${traj.liftoffTwr.toFixed(2)}</div></div>
+        <div class="stat-item"><div class="sl">Peak accel</div> <div class="sv">${traj.peakAccel.toFixed(1)} g</div></div>
+        <div class="stat-item"><div class="sl">Max-Q</div>      <div class="sv">${(traj.maxQ / 1000).toFixed(0)} kPa</div></div>
+        <div class="stat-item"><div class="sl">Gravity loss</div><div class="sv">${fdv(traj.dvGrav)} km/s</div></div>
+        <div class="stat-item"><div class="sl">Drag loss</div>  <div class="sv">${Math.round(traj.dvDrag)} m/s</div></div>
+        <div class="stat-item"><div class="sl">LEO required</div><div class="sv">${fdv(dvRequiredLeo)} km/s</div></div>
+      </div>${warn}`;
+  }
 
   // Stage breakdown
   const stageCards = [...stages].reverse().map((s, ri) => {
     const i        = stages.length - 1 - ri;
     const c        = s.p.color;
-    const ispLabel = i === 0 ? 'Isp (SL)' : 'Isp (vac)';
+    const ispLabel = 'Isp (eff)';
     return `<div class="stage-result">
       <div class="sr-head">
         <div class="dot" style="background:${c}"></div>
@@ -41,7 +67,7 @@ export function renderResults(phys) {
         <div class="stat-item"><div class="sl">Dry Mass</div>   <div class="sv">${fmass(s.dryMass)}</div></div>
         <div class="stat-item"><div class="sl">Propellant</div> <div class="sv">${fmass(s.propMass)}</div></div>
         <div class="stat-item"><div class="sl">Mass Ratio</div> <div class="sv">${s.mr.toFixed(2)}</div></div>
-        <div class="stat-item"><div class="sl">${ispLabel}</div><div class="sv">${s.isp} s</div></div>
+        <div class="stat-item"><div class="sl">${ispLabel}</div><div class="sv">${Math.round(s.isp)} s</div></div>
         <div class="stat-item"><div class="sl">Thrust</div>    <div class="sv">${fthrust(s.thrust)}</div></div>
         <div class="stat-item"><div class="sl">σ total</div>  <div class="sv">${s.sigma.toFixed(3)}</div></div>
         ${s.sigmaBreakdown.engineCount !== null
@@ -71,7 +97,7 @@ export function renderResults(phys) {
         <div class="stat-item"><div class="sl">Dry (per unit)</div>  <div class="sv">${fmass(br.dryMass)}</div></div>
         <div class="stat-item"><div class="sl">Prop. (per unit)</div><div class="sv">${fmass(br.propMass)}</div></div>
         <div class="stat-item"><div class="sl">Mass Ratio</div>      <div class="sv">${br.mr.toFixed(2)}</div></div>
-        <div class="stat-item"><div class="sl">Isp (SL)</div>        <div class="sv">${br.isp} s</div></div>
+        <div class="stat-item"><div class="sl">Isp (eff)</div>       <div class="sv">${Math.round(br.isp)} s</div></div>
         <div class="stat-item"><div class="sl">Thrust (each)</div>   <div class="sv">${fthrust(br.thrust)}</div></div>
         <div class="stat-item"><div class="sl">σ total</div>         <div class="sv">${br.sigma.toFixed(3)}</div></div>
         ${br.sigmaBreakdown.engineCount !== null
@@ -103,9 +129,9 @@ export function renderResults(phys) {
 
   // Cost estimate
   const cost    = calcCost(phys);
-  const leoPayload = calcMaxPayload(MISSIONS[0].dv);
-  const costPerKg  = (leoPayload !== null && leoPayload >= 1)
-    ? cost.total / leoPayload : null;
+  const leo     = calcMaxPayload(MISSIONS[0].dvBeyondLeo);
+  const costPerKg = (leo.payload !== null && leo.payload >= 1 && !leo.overQ)
+    ? cost.total / leo.payload : null;
 
   const pct = v => `${Math.round(v / cost.total * 100)}%`;
   document.getElementById('cost-section').innerHTML = `

@@ -63,7 +63,7 @@ export const COMBINATIONS = {
   'N2O4/Hydrazine':       { isp_sl: 292, isp_vac: 339, of_ratio: 1.34 },
   'N2O4/Hydyne':          { isp_sl: 282, isp_vac: 330, of_ratio: 2.71 },
   'N2O4/Kerosene':        { isp_sl: 276, isp_vac: 323, of_ratio: 4.04 },
-  'N2O4/Ammonia':             { isp_sl: 215, isp_vac: 280, of_ratio: 2.04 },
+  'N2O4/Ammonia':         { isp_sl: 215, isp_vac: 280, of_ratio: 2.04 },
   'H2O2/LH2':             { isp_sl: 351, isp_vac: 380, of_ratio: 15.00 },
   'H2O2/LCH4':            { isp_sl: 300, isp_vac: 340, of_ratio: 8.4 },
   'H2O2/Ethane':          { isp_sl: 300, isp_vac: 340, of_ratio: 7.8 },
@@ -114,6 +114,15 @@ export const COMBINATIONS = {
   'BrF5/UDMH':            { isp_sl: 231, isp_vac: 231, of_ratio: 3.80 },
 };
 
+// Everything dry that is neither tank shell nor engine: residual propellant, He
+// pressurisation, insulation, thrust structure, interstage, avionics, separation
+// hardware. Split into a floor that scales with propellant mass (residuals and
+// hardware, ~1.4%) plus a term inversely proportional to bulk density, since the
+// bulky low-density propellants need proportionally more tank volume to insulate,
+// pressurise and carry. Calibrated so kerolox lands near Falcon 9 stage 1 (σ 0.054
+// total) and LH2 near Centaur/DCSS (σ ~0.10).
+const otherFraction = density => 0.0136 + 16.8 / density;
+
 // Returns a prop object with the same shape as PROPS entries in propellants.js.
 export function resolveProp(oxidiser, fuel) {
   if (OXIDISERS[oxidiser]?.solid) return SOLID_PROPS;
@@ -122,11 +131,12 @@ export function resolveProp(oxidiser, fuel) {
   const comb = COMBINATIONS[`${oxidiser}/${fuel}`];
   if (!ox || !f || !comb) throw new Error(`Unknown combination: ${oxidiser}/${fuel}`);
 
-  const { isp_sl, isp_vac, of_ratio, sigmaOther = 0.02 } = comb;
+  const { isp_sl, isp_vac, of_ratio } = comb;
   const rhoF  = f.density_gcc;
   const rhoOx = ox.density_gcc;
   const density   = (1 + of_ratio) / (1 / rhoF + of_ratio / rhoOx) * 1000;
   const oxVolFrac = (of_ratio / rhoOx) / (of_ratio / rhoOx + 1 / rhoF);
+  const sigmaOther = comb.sigmaOther ?? otherFraction(density);
 
   return {
     isp_sl, isp_vac, of_ratio, sigmaOther, density, oxVolFrac,
