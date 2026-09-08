@@ -1,4 +1,4 @@
-import { MISSIONS } from '../../config/propellants.js';
+import { MISSIONS, G0 } from '../../config/propellants.js';
 import { calcMaxPayload } from '../physics.js';
 import { ASCENT } from '../trajectory.js';
 import { calcCost } from '../cost.js';
@@ -37,8 +37,8 @@ export function renderResults(phys) {
       ? '<div class="loss-warn">Thrust below weight at liftoff — vehicle cannot leave the pad.</div>'
       : traj.overQ
       ? `<div class="loss-warn">Max-Q ${(traj.maxQ / 1000).toFixed(0)} kPa exceeds the
-         ${(ASCENT.maxQLimit / 1000).toFixed(0)} kPa structural limit — reduce thrust
-         or extend burn time.</div>`
+         ${(ASCENT.maxQLimit / 1000).toFixed(0)} kPa structural limit — fit fewer
+         engines, or smaller ones.</div>`
       : '';
     lossEl.innerHTML = `
       <div class="stat-grid">
@@ -55,7 +55,6 @@ export function renderResults(phys) {
   const stageCards = [...stages].reverse().map((s, ri) => {
     const i        = stages.length - 1 - ri;
     const c        = s.p.color;
-    const ispLabel = 'Isp (eff)';
     return `<div class="stage-result">
       <div class="sr-head">
         <div class="dot" style="background:${c}"></div>
@@ -67,8 +66,10 @@ export function renderResults(phys) {
         <div class="stat-item"><div class="sl">Dry Mass</div>   <div class="sv">${fmass(s.dryMass)}</div></div>
         <div class="stat-item"><div class="sl">Propellant</div> <div class="sv">${fmass(s.propMass)}</div></div>
         <div class="stat-item"><div class="sl">Mass Ratio</div> <div class="sv">${s.mr.toFixed(2)}</div></div>
-        <div class="stat-item"><div class="sl">${ispLabel}</div><div class="sv">${Math.round(s.isp)} s</div></div>
+        <div class="stat-item"><div class="sl">Isp (eff)</div><div class="sv">${Math.round(s.isp)} s</div></div>
         <div class="stat-item"><div class="sl">Thrust</div>    <div class="sv">${fthrust(s.thrust)}</div></div>
+        <div class="stat-item"><div class="sl">Burn time</div> <div class="sv">${Math.round(s.burnTime)} s</div></div>
+        <div class="stat-item"><div class="sl">T/W at ignition</div><div class="sv">${(s.thrust / (s.m0 * G0)).toFixed(2)}</div></div>
         <div class="stat-item"><div class="sl">σ total</div>  <div class="sv">${s.sigma.toFixed(3)}</div></div>
         ${s.sigmaBreakdown.engineCount !== null
           ? `<div class="stat-item"><div class="sl">Engines</div>   <div class="sv">${s.sigmaBreakdown.engineCount} × ${s.thrustPerEngine} kN</div></div>`
@@ -99,6 +100,7 @@ export function renderResults(phys) {
         <div class="stat-item"><div class="sl">Mass Ratio</div>      <div class="sv">${br.mr.toFixed(2)}</div></div>
         <div class="stat-item"><div class="sl">Isp (eff)</div>       <div class="sv">${Math.round(br.isp)} s</div></div>
         <div class="stat-item"><div class="sl">Thrust (each)</div>   <div class="sv">${fthrust(br.thrust)}</div></div>
+        <div class="stat-item"><div class="sl">Burn time</div>       <div class="sv">${Math.round(br.burnTime)} s</div></div>
         <div class="stat-item"><div class="sl">σ total</div>         <div class="sv">${br.sigma.toFixed(3)}</div></div>
         ${br.sigmaBreakdown.engineCount !== null
           ? `<div class="stat-item"><div class="sl">Engines (each)</div><div class="sv">${br.sigmaBreakdown.engineCount} × ${br.thrustPerEngine} kN</div></div>`

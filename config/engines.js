@@ -14,3 +14,8 @@ export const PLUMBING_FRAC = 0.15;
 
 // Solid motor case pressure (bar) — used in Barlow formula for the motor casing.
 export const SOLID_CASE_PRESSURE = 60;
+
+// Solid motors have no engine count to derive a burn time from: it is set by the
+// grain's web thickness, which scales with the motor, so burn time stays roughly
+// constant across sizes. Shuttle SRB 124 s, Ariane 5 EAP 130 s, Atlas V SRB 90 s.
+export const SOLID_BURN_TIME = 120; // s

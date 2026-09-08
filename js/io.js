@@ -26,8 +26,12 @@ function validateStage(s) {
   if (!isSolid) {
     if (!FUELS[s.fuel])                            throw new Error(`Unknown fuel: ${s.fuel}`);
     if (!COMBINATIONS[`${s.oxidiser}/${s.fuel}`])  throw new Error(`No combination: ${s.oxidiser}/${s.fuel}`);
+    // Configs saved before burn time became a derived value carry no engine count.
+    if (!Number.isInteger(s.engineCount) || s.engineCount < 1)
+      throw new Error(`Invalid engineCount: ${s.engineCount}`
+        + (s.burnTime !== undefined ? ' (config predates the engine-count input)' : ''));
   }
-  for (const field of ['diameter', 'height', 'fill', 'burnTime']) {
+  for (const field of ['diameter', 'height', 'fill']) {
     if (typeof s[field] !== 'number' || s[field] <= 0)
       throw new Error(`Invalid ${field}: ${s[field]}`);
   }

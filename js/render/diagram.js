@@ -1,40 +1,86 @@
 import { state } from '../state.js';
 
-// Returns [{x, y, ring}] in normalised "ring-spacing = 1" coordinates.
-// Ring 0 = centre engine; ring k holds floor(2π·k) engines evenly spaced.
+// Smallest ring radius that leaves adjacent engines exactly one unit apart.
+const ringRadius = n => (n < 2 ? 0 : 1 / (2 * Math.sin(Math.PI / n)));
+
+// How many engines sit in each ring, index 0 being the centre position.
+// A centre engine only earns its place from 5 up: below that a plain symmetric
+// ring is what real twin, triple and quad layouts actually look like.
+function ringPopulations(count) {
+  if (count <= 1) return [count];
+  const centre    = count >= 5 ? 1 : 0;
+  const remaining = count - centre;
+
+  // Ring k seats up to 8k, so the inner ring takes the eight engines that
+  // surround a centre engine on Falcon 9, Electron and other nine-engine stages.
+  let rings = 0, capacity = 0;
+  while (capacity < remaining) capacity += 8 * ++rings;
+
+  // Spread across the rings in proportion to their capacity rather than filling
+  // each one before starting the next, so the outermost ring never ends up
+  // holding a single lonely engine.
+  const weight = rings * (rings + 1) / 2;
+  const pop = [centre];
+  let placed = 0;
+  for (let k = 1; k <= rings; k++) {
+    const n = k === rings ? remaining - placed
+                          : Math.max(1, Math.round(remaining * k / weight));
+    pop.push(n);
+    placed += n;
+  }
+  return pop;
+}
+
+// Returns [{x, y, ring}] in normalised coordinates where the minimum spacing
+// between any two engines is exactly 1, whichever ring they belong to.
 function computeEnginePositions(count) {
-  const positions = [];
-  let remaining = count;
-  for (let ring = 0; remaining > 0; ring++) {
-    const cap = ring === 0 ? 1 : Math.floor(2 * Math.PI * ring);
-    const n   = Math.min(remaining, cap);
-    if (ring === 0) {
-      positions.push({ x: 0, y: 0, ring: 0 });
-    } else {
-      for (let k = 0; k < n; k++) {
-        const a = (k / n) * 2 * Math.PI - Math.PI / 2;
-        positions.push({ x: ring * Math.cos(a), y: ring * Math.sin(a), ring });
-      }
+  const pop       = ringPopulations(count);
+  const positions = pop[0] > 0 ? [{ x: 0, y: 0, ring: 0 }] : [];
+
+  let prev = pop[0] > 0 ? 1 : 0; // clearance owed to whatever is already inside
+  for (let ring = 1; ring < pop.length; ring++) {
+    const n = pop[ring];
+    const r = Math.max(prev, ringRadius(n));
+    // Odd counts point one engine at the top; even counts straddle the axis, so
+    // a pair reads as side-by-side rather than stacked front-to-back.
+    const a0 = -Math.PI / 2 + (n % 2 === 0 ? Math.PI / n : 0);
+    for (let k = 0; k < n; k++) {
+      const a = a0 + (k / n) * 2 * Math.PI;
+      positions.push({ x: r * Math.cos(a), y: r * Math.sin(a), ring });
     }
-    remaining -= n;
+    prev = r + 1;
   }
   return positions;
 }
 
-// Returns how many engine bells are visible in the side-on rocket diagram.
-// Logic: each ring that has >=3 engines contributes 2 visible bells (left + right extreme);
-// the centre engine (ring 0) contributes 1. For <=3 engines the raw count is returned.
-function sideViewBells(engineCount) {
-  if (!engineCount || engineCount <= 0) return 1;  // solid / unknown → single nozzle
-  if (engineCount <= 3) return engineCount;
-  const positions = computeEnginePositions(engineCount);
-  const ringPop = {};
-  for (const p of positions) ringPop[p.ring] = (ringPop[p.ring] || 0) + 1;
-  let outerRing = 0;
-  for (const [r, n] of Object.entries(ringPop)) {
-    if (n >= 3) outerRing = Math.max(outerRing, Number(r));
+// Draws the engine cluster as it actually appears side-on: an orthographic
+// projection of the top-down layout, so each bell sits at the x it really
+// occupies and pairs at equal depth line up behind one another. Painted back to
+// front, letting nearer bells occlude the ones behind exactly as they would.
+function sideViewEngines(engineCount, thrustPerEngine, geom) {
+  const { cx, top, halfWidth, height, strokeWidth } = geom;
+  const positions = engineCount > 0
+    ? computeEnginePositions(engineCount)
+    : [{ x: 0, y: 0 }];              // solid motor, or count not yet resolved
+
+  const maxR   = positions.reduce((m, p) => Math.max(m, Math.hypot(p.x, p.y)), 0);
+  const scale  = (halfWidth * 0.85) / (maxR + 0.52);
+  // Same bell sizing as the top-down inset, so the two views agree.
+  const factor = Math.pow(Math.max(10, thrustPerEngine || 800) / 800, 0.32);
+  const bellR  = Math.min(scale * 0.44, Math.max(2.2, scale * 0.38 * factor));
+  const throat = bellR * 0.32;
+  const exitY  = top + height;
+
+  let out = '';
+  for (const p of [...positions].sort((a, b) => a.y - b.y)) {
+    const bx = cx + p.x * scale;
+    out += `<polygon points="${bx - throat},${top} ${bx + throat},${top}
+      ${bx + bellR},${exitY} ${bx - bellR},${exitY}"
+      fill="#111827" stroke="#334155" stroke-width="${strokeWidth}"/>`;
+    out += `<ellipse cx="${bx}" cy="${exitY}" rx="${bellR}" ry="${bellR * 0.24}"
+      fill="none" stroke="#4b6080" stroke-width="${strokeWidth * 0.83}"/>`;
   }
-  return 2 * outerRing + 1;
+  return out;
 }
 
 // Renders a right-side column of top-down cross-section insets, one per stage + booster.
@@ -101,10 +147,10 @@ function renderTopViews(W, H, phys) {
 
     } else if (engCount && engCount > 0) {
       const positions = computeEnginePositions(engCount);
-      const maxRing   = positions.reduce((m, p) => Math.max(m, p.ring), 0);
+      const maxR      = positions.reduce((m, p) => Math.max(m, Math.hypot(p.x, p.y)), 0);
 
       // Scale so outermost ring edge fits within tank (leave wall gap).
-      const posScale  = (tankR * 0.84) / Math.max(maxRing + 0.52, 0.52);
+      const posScale  = (tankR * 0.84) / (maxR + 0.52);
 
       // Engine radius: proportional to sqrt(thrust), normalised to 800 kN reference.
       const thrustFactor = Math.pow(Math.max(10, s.thrustPerEngine) / 800, 0.32);
@@ -386,24 +432,10 @@ export function renderSVG(phys) {
     y += h;
     if (i === 0) stage0BodyH = h;
 
-    const engHpx  = s.diameter * 0.40 * scale;
-    const nEng    = sideViewBells(s.sigmaBreakdown?.engineCount);
-    const engTW   = s.diameter * scale * 0.85;
-    const cellW   = engTW / nEng;
-    const gutter  = cellW * 0.12;
-    const bW      = cellW - gutter * 2;
-    const throatW = bW * 0.32;
-    const ex0     = cx - engTW / 2;
-
-    for (let e = 0; e < nEng; e++) {
-      const bx  = ex0 + e * cellW + gutter;
-      const tx  = bx + (bW - throatW) / 2;
-      const eyY = y + engHpx;
-      html += `<polygon points="${tx},${y} ${tx+throatW},${y} ${bx+bW},${eyY} ${bx},${eyY}"
-        fill="#111827" stroke="#334155" stroke-width="1.2"/>`;
-      html += `<ellipse cx="${bx + bW/2}" cy="${eyY}" rx="${bW/2}" ry="${bW*0.12}"
-        fill="none" stroke="#4b6080" stroke-width="1"/>`;
-    }
+    const engHpx = s.diameter * 0.40 * scale;
+    html += sideViewEngines(s.sigmaBreakdown?.engineCount, s.thrustPerEngine, {
+      cx, top: y, halfWidth: s.diameter * scale / 2, height: engHpx, strokeWidth: 1.2,
+    });
 
     y += engHpx;
 
@@ -477,22 +509,11 @@ export function renderSVG(phys) {
       ].join(' ');
       html += `<path d="${bnPath}" fill="${bc}18" stroke="${bc}" stroke-width="1.2"/>`;
 
-      const nBEng   = sideViewBells(phys.booster.sigmaBreakdown?.engineCount);
-      const bEngTW  = bW * 0.85;
-      const bCellW  = bEngTW / nBEng;
-      const bGutter = bCellW * 0.12;
-      const bBellW  = bCellW - bGutter * 2;
-      const bThroW  = bBellW * 0.32;
-      const bEx0    = bx + (bW - bEngTW) / 2;
-      for (let e = 0; e < nBEng; e++) {
-        const bellX = bEx0 + e * bCellW + bGutter;
-        const tx    = bellX + (bBellW - bThroW) / 2;
-        const exitY = bBodyBottom + bEngH;
-        html += `<polygon points="${tx},${bBodyBottom} ${tx+bThroW},${bBodyBottom} ${bellX+bBellW},${exitY} ${bellX},${exitY}"
-          fill="#111827" stroke="#334155" stroke-width="1"/>`;
-        html += `<ellipse cx="${bellX+bBellW/2}" cy="${exitY}" rx="${bBellW/2}" ry="${bBellW*0.12}"
-          fill="none" stroke="#4b6080" stroke-width="0.8"/>`;
-      }
+      html += sideViewEngines(phys.booster.sigmaBreakdown?.engineCount,
+        phys.booster.thrustPerEngine, {
+          cx: bx + bW / 2, top: bBodyBottom, halfWidth: bW / 2,
+          height: bEngH, strokeWidth: 1,
+        });
 
       const lfs = Math.max(7, Math.min(10, bW / 5));
       if (bH > 22) {

@@ -1,6 +1,6 @@
 import { G0 } from '../config/propellants.js';
 import { TANK_MATERIALS } from '../config/materials.js';
-import { ENGINE_TYPES, SOLID_CASE_PRESSURE, PLUMBING_FRAC } from '../config/engines.js';
+import { ENGINE_TYPES, SOLID_CASE_PRESSURE, SOLID_BURN_TIME, PLUMBING_FRAC } from '../config/engines.js';
 import { resolveProp } from '../config/propellant_components.js';
 import { simulateAscent, leoRequirement, ASCENT } from './trajectory.js';
 import { state } from './state.js';
@@ -9,7 +9,7 @@ const TANK_SF = 1.5; // aerospace pressure vessel safety factor
 
 // Barlow's formula for cylindrical tank + hemispherical caps, normalised by propellant mass.
 // Returns { tank, engine, other, total, engineCount } — sigmas are dimensionless mass fractions.
-export function calcSigma(stage, stageIndex) {
+export function calcSigma(stage) {
   const prop = resolveProp(stage.oxidiser, stage.fuel);
   const mat  = TANK_MATERIALS[stage.tankMaterial];
   const { diameter: d, height: h, fill } = stage;
@@ -25,13 +25,8 @@ export function calcSigma(stage, stageIndex) {
   let engine = 0, engineCount = null;
   if (!prop.solid) {
     const { engineTW } = ENGINE_TYPES[stage.engineType];
-    const isp         = stageIndex === 0 ? prop.isp_sl : prop.isp_vac;
     const propMass    = Math.PI * (d / 2) ** 2 * h * fill * prop.density;
-    const totalThrust = propMass * isp * G0 / stage.burnTime; // N
-    // Round up: you must buy whole engines; any surplus thrust capacity is dead mass.
-    engineCount = Math.ceil(totalThrust / (stage.thrustPerEngine * 1000));
-    // Per-engine mass at rated thrust; if engineCount > raw count the engine is oversized,
-    // so this correctly scales mass with the (surplus) rated thrust rather than actual thrust.
+    engineCount = stage.engineCount;
     const perEngineMass = (stage.thrustPerEngine * 1000) / (engineTW * G0); // kg
     // Each engine beyond the first adds plumbing overhead (feed lines, valves, manifold).
     const plumbingMass  = (engineCount - 1) * PLUMBING_FRAC * perEngineMass; // kg
@@ -42,29 +37,41 @@ export function calcSigma(stage, stageIndex) {
   return { tank, engine, other, total: tank + engine + other, engineCount };
 }
 
+// Burn time is an output, not an input: the cluster's rated thrust fixes the mass
+// flow and the propellant load divides by it. Thrust is rated at the condition the
+// stage characteristically flies in — sea level for whatever lights on the pad,
+// vacuum above. Solid motors have no engine count; their burn time is a constant.
+function burnTimeOf(stage, prop, propMass, atSeaLevel) {
+  if (prop.solid) return SOLID_BURN_TIME;
+  const isp = atSeaLevel ? prop.isp_sl : prop.isp_vac;
+  return propMass * isp * G0 / (stage.engineCount * stage.thrustPerEngine * 1000);
+}
+
 export function calcPhysics(payload = 0) {
   const { stages, boosters } = state;
 
   const sd = stages.map((s, i) => {
     const p              = resolveProp(s.oxidiser, s.fuel);
-    const sigmaBreakdown = calcSigma(s, i);
+    const sigmaBreakdown = calcSigma(s);
     const sigma          = sigmaBreakdown.total;
     const propVol        = Math.PI * (s.diameter / 2) ** 2 * s.height * s.fill;
     const propMass       = propVol * p.density;
     const dryMass        = sigma * propMass;
     const wetMass        = propMass + dryMass;
-    return { ...s, p, sigma, sigmaBreakdown, propMass, dryMass, wetMass };
+    const burnTime       = burnTimeOf(s, p, propMass, i === 0);
+    return { ...s, p, sigma, sigmaBreakdown, propMass, dryMass, wetMass, burnTime };
   });
 
   let bd = null;
   if (boosters.count > 0) {
     const p              = resolveProp(boosters.oxidiser, boosters.fuel);
-    const sigmaBreakdown = calcSigma(boosters, 0);
+    const sigmaBreakdown = calcSigma(boosters);
     const propVol  = Math.PI * (boosters.diameter / 2) ** 2 * boosters.height * boosters.fill;
     const propMass = propVol * p.density;
     const dryMass  = sigmaBreakdown.total * propMass;
     bd = { p, sigmaBreakdown, sigma: sigmaBreakdown.total, propMass, dryMass,
-           wetMass: propMass + dryMass, count: boosters.count };
+           wetMass: propMass + dryMass, count: boosters.count,
+           burnTime: burnTimeOf(boosters, p, propMass, true) };
   }
 
   const area      = d => Math.PI * (d / 2) ** 2;
@@ -78,7 +85,7 @@ export function calcPhysics(payload = 0) {
   const burners = [];
   if (bd) burners.push({
     propMass: bd.count * bd.propMass,
-    mdot: bd.count * bd.propMass / boosters.burnTime,
+    mdot: bd.count * bd.propMass / bd.burnTime,
     ispSl: bd.p.isp_sl, ispVac: bd.p.isp_vac,
   });
   sd.forEach(s => burners.push({
@@ -118,7 +125,7 @@ export function calcPhysics(payload = 0) {
     const { ispEff: isp, dv } = traj.burners[0];
     boosterResult = {
       ...bd, m0: m0b, m1: m1b, mr: m0b / m1b, isp, dv,
-      thrust: (bd.propMass / boosters.burnTime) * isp * G0,
+      thrust: (bd.propMass / bd.burnTime) * isp * G0,
       oxidiser: boosters.oxidiser, fuel: boosters.fuel,
       diameter: boosters.diameter, height: boosters.height,
       thrustPerEngine: boosters.thrustPerEngine,

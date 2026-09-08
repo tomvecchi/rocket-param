@@ -16,7 +16,7 @@ export function setupEvents() {
       tankMaterial: 'Al-2219',
       engineType: 'pump-fed',
       thrustPerEngine: 850,
-      burnTime: 180,
+      engineCount: 3,
     });
     renderCards();
     update();
@@ -37,7 +37,7 @@ export function setupEvents() {
     else if (param === 'height')          { labelId = `v-height-${id}`;  labelText = (+el.value).toFixed(1) + ' m'; }
     else if (param === 'fill')            { labelId = `v-fill-${id}`;    labelText = Math.round(+el.value * 100) + '%'; }
     else if (param === 'thrustPerEngine') { labelId = `v-thrust-${id}`;  labelText = el.value + ' kN'; }
-    else if (param === 'burnTime')        { labelId = `v-burntime-${id}`; labelText = el.value + ' s'; }
+    else if (param === 'engineCount')     { labelId = `v-engines-${id}`; labelText = el.value === '1' ? '1 engine' : el.value + ' engines'; }
     if (labelId) document.getElementById(labelId).textContent = labelText;
     update();
   });

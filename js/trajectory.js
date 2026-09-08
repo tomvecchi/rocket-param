@@ -103,7 +103,11 @@ export function simulateAscent(burners, phases, m0, opts = ASCENT) {
     const primary  = b[ph.primary];
     const active   = ph.active.map(i => b[i]);
     const nominal  = active.reduce((a, x) => a + x.mdot, 0);
-    const maxSteps = nominal > 0 ? Math.ceil(5 * primary.propMass / (primary.mdot * opts.dt)) : 0;
+    // Headroom for throttling, but hard-capped: an under-engined stage can ask for
+    // a burn of arbitrary length, and the loop must not become unbounded work.
+    const maxSteps = nominal > 0
+      ? Math.min(Math.ceil(5 * primary.propMass / (primary.mdot * opts.dt)), 8000)
+      : 0;
 
     for (let i = 0; i < maxSteps && primary.left > 0; i++) {
       const { rho, pressure, soundSpeed: a } = atmosphere(h);

@@ -50,11 +50,11 @@ function liquidAdvanced(s, isSuffix) {
     </div>
     <div class="row">
       <div class="row-label">
-        <span>Burn time</span>
-        <span class="val" id="v-burntime-${s.id}">${s.burnTime} s</span>
+        <span>Engines</span>
+        <span class="val" id="v-engines-${s.id}">${s.engineCount === 1 ? '1 engine' : s.engineCount + ' engines'}</span>
       </div>
-      <input type="range" min="30" max="600" step="10" value="${s.burnTime}"
-        data-id="${s.id}" data-param="burnTime">
+      <input type="range" min="1" max="40" step="1" value="${s.engineCount}"
+        data-id="${s.id}" data-param="engineCount">
     </div>`;
 }
 
@@ -208,10 +208,10 @@ export function renderBoosterSection() {
           </div>
           <div class="row">
             <div class="row-label">
-              <span>Burn time</span>
-              <span class="val" id="v-boost-burntime">${bst.burnTime} s</span>
+              <span>Engines / booster</span>
+              <span class="val" id="v-boost-engines">${bst.engineCount === 1 ? '1 engine' : bst.engineCount + ' engines'}</span>
             </div>
-            <input type="range" min="30" max="600" step="10" value="${bst.burnTime}" id="s-boost-burntime">
+            <input type="range" min="1" max="40" step="1" value="${bst.engineCount}" id="s-boost-engines">
           </div>` : ''}
         </div>
       </div>
@@ -283,9 +283,10 @@ export function renderBoosterSection() {
     document.getElementById('v-boost-thrust').textContent = e.target.value + ' kN';
     update();
   });
-  document.getElementById('s-boost-burntime').addEventListener('input', e => {
-    state.boosters.burnTime = +e.target.value;
-    document.getElementById('v-boost-burntime').textContent = e.target.value + ' s';
+  document.getElementById('s-boost-engines').addEventListener('input', e => {
+    state.boosters.engineCount = +e.target.value;
+    document.getElementById('v-boost-engines').textContent =
+      e.target.value === '1' ? '1 engine' : e.target.value + ' engines';
     update();
   });
 }
