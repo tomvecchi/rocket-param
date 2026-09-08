@@ -5,9 +5,10 @@ function stageUnitCost(s) {
   if (s.p.solid) {
     propCost = s.propMass * SOLID_PROP_COST;
   } else {
-    const of     = s.p.of_ratio;
-    const oxFrac = of / (1 + of);
-    propCost = s.propMass * (oxFrac * OX_COST[s.oxidiser] + (1 - oxFrac) * FUEL_COST[s.fuel]);
+    // Blend each constituent at its mass fraction, which covers the three-part
+    // tripropellant as naturally as an ordinary oxidiser/fuel pair.
+    propCost = s.propMass * s.p.components.reduce(
+      (a, c) => a + c.massFrac * ((c.role === 'ox' ? OX_COST : FUEL_COST)[c.key] ?? 0), 0);
   }
   const tankCost  = (s.sigmaBreakdown.tank  * s.propMass) * TANK_COST[s.tankMaterial];
   const otherCost = (s.sigmaBreakdown.other * s.propMass) * OTHER_STRUCT_COST;

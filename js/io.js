@@ -22,10 +22,13 @@ export function saveConfig() {
 
 function validateStage(s) {
   const isSolid = OXIDISERS[s.oxidiser]?.solid === true;
+  const isTri   = OXIDISERS[s.oxidiser]?.tri   === true;
   if (!OXIDISERS[s.oxidiser]) throw new Error(`Unknown oxidiser: ${s.oxidiser}`);
-  if (!isSolid) {
+  if (!isSolid && !isTri) {
     if (!FUELS[s.fuel])                            throw new Error(`Unknown fuel: ${s.fuel}`);
     if (!COMBINATIONS[`${s.oxidiser}/${s.fuel}`])  throw new Error(`No combination: ${s.oxidiser}/${s.fuel}`);
+  }
+  if (!isSolid) {
     // Configs saved before burn time became a derived value carry no engine count.
     if (!Number.isInteger(s.engineCount) || s.engineCount < 1)
       throw new Error(`Invalid engineCount: ${s.engineCount}`

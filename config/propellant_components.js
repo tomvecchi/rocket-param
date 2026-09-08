@@ -5,10 +5,12 @@ const SOLID_PROPS = {
   isp_sl: 250, isp_vac: 270, density: 1750,
   color: '#f87171', name: 'HTPB Solid', abbrev: 'SRB',
   solid: true, sigmaOther: 0.04,
+  components: [{ key: 'Solid', role: 'fuel', name: 'HTPB grain', color: '#f87171', massFrac: 1, volFrac: 1 }],
 };
 
 export const OXIDISERS = {
   Solid:      { name: 'HTPB Solid', density_gcc: null,  color: '#f87171', solid: true  },
+  Tri:        { name: 'Li/F₂/H₂ tri',  density_gcc: null,  color: '#22d3ee', tri: true    },
   Lox:        { name: 'LOX',        density_gcc: 1.14,  color: '#1d4ed8'               },
   N2O:        { name: 'N₂O',        density_gcc: 1.22,  color: '#dcca26'               },
   N2O4:       { name: 'N₂O₄',       density_gcc: 1.45,  color: '#dc2626'               },
@@ -40,7 +42,7 @@ export const FUELS = {
   MMH:       { name: 'MMH',     density_gcc: 0.880, color: '#d8b4fe', abbrev: 'MMH'    },
   Hydrazine: { name: 'N₂H₄',    density_gcc: 1.008, color: '#4ade80', abbrev: 'N₂H₄'   },
   Solid:     { name: 'HTPB',    density_gcc: 1.350, color: '#94a3b8', abbrev: 'HTPB'   },
-  LLi:       { name: 'Lithium', density_gcc: 6.940, color: '#d31737', abbrev: 'Li'     },
+  LLi:       { name: 'Lithium', density_gcc: 0.534, color: '#d31737', abbrev: 'Li'     },
 };
 
 export const COMBINATIONS = {
@@ -123,30 +125,79 @@ export const COMBINATIONS = {
 // total) and LH2 near Centaur/DCSS (σ ~0.10).
 const otherFraction = density => 0.0136 + 16.8 / density;
 
+// Bulk density and per-component mass/volume splits for a propellant of any number
+// of constituents. Parts are listed in the order they stack in the tank diagram.
+function mixture(parts) {
+  const mass = parts.reduce((a, p) => a + p.mass, 0);
+  const vol  = parts.reduce((a, p) => a + p.mass / p.density, 0);
+  return {
+    density: (mass / vol) * 1000,
+    components: parts.map(p => ({
+      key: p.key, name: p.name, color: p.color, role: p.role,
+      massFrac: p.mass / mass,
+      volFrac:  (p.mass / p.density) / vol,
+    })),
+  };
+}
+
+// Rocketdyne's lithium / fluorine / hydrogen tripropellant, tested on the stand in
+// the late 1960s — 542 s, still the highest specific impulse ever measured for a
+// chemical rocket.
+//
+// Lithium burns with fluorine (2Li + F₂ → 2LiF), which is what releases the energy.
+// The hydrogen is barely a fuel at all: it is injected as a working fluid to drag
+// the mean exhaust molecular weight down from LiF's 25.9, and that is where the
+// extra impulse comes from. Masses below are stoichiometric Li/F₂ plus about one
+// mole of H₂ per mole of LiF, the ratio that lands on the measured figure.
+//
+// Never flown, and never will: the exhaust is hydrogen fluoride and molten LiF, it
+// needs a tank of liquid metal bolted to one at 20 K, and fluorine attacks almost
+// any material you would want to build the rest out of.
+const TRI_MIX = mixture([
+  { key: 'LH2', role: 'fuel', name: 'LH₂',     color: '#22d3ee', mass:  4.032, density: 0.071 },
+  { key: 'LLi', role: 'fuel', name: 'Lithium', color: '#d31737', mass: 13.880, density: 0.534 },
+  { key: 'LF2', role: 'ox',   name: 'LF₂',     color: '#7e22ce', mass: 38.000, density: 1.510 },
+]);
+
+const TRI_PROPS = {
+  isp_sl: 477, isp_vac: 542,
+  density: TRI_MIX.density, components: TRI_MIX.components,
+  color: '#22d3ee', name: 'Li / F₂ / H₂', abbrev: 'TRI',
+  solid: false, tri: true,
+  // Three tanks instead of two, one of them holding molten metal next to one at
+  // 20 K, every wetted surface fluorine-compatible: far more inert mass than the
+  // density term alone would suggest.
+  sigmaOther: 0.07,
+};
+
 // Returns a prop object with the same shape as PROPS entries in propellants.js.
 export function resolveProp(oxidiser, fuel) {
   if (OXIDISERS[oxidiser]?.solid) return SOLID_PROPS;
+  if (OXIDISERS[oxidiser]?.tri)   return TRI_PROPS;
   const ox   = OXIDISERS[oxidiser];
   const f    = FUELS[fuel];
   const comb = COMBINATIONS[`${oxidiser}/${fuel}`];
   if (!ox || !f || !comb) throw new Error(`Unknown combination: ${oxidiser}/${fuel}`);
 
   const { isp_sl, isp_vac, of_ratio } = comb;
-  const rhoF  = f.density_gcc;
-  const rhoOx = ox.density_gcc;
-  const density   = (1 + of_ratio) / (1 / rhoF + of_ratio / rhoOx) * 1000;
-  const oxVolFrac = (of_ratio / rhoOx) / (of_ratio / rhoOx + 1 / rhoF);
-  const sigmaOther = comb.sigmaOther ?? otherFraction(density);
+  const mix = mixture([
+    { key: fuel,     role: 'fuel', name: f.name,  color: f.color,  mass: 1,        density: f.density_gcc  },
+    { key: oxidiser, role: 'ox',   name: ox.name, color: ox.color, mass: of_ratio, density: ox.density_gcc },
+  ]);
+  const sigmaOther = comb.sigmaOther ?? otherFraction(mix.density);
 
   return {
-    isp_sl, isp_vac, of_ratio, sigmaOther, density, oxVolFrac,
-    color:     f.color,
-    oxColor:   ox.color,
-    fuelColor: f.color,
-    name:      `${f.name} / ${ox.name}`,
-    abbrev:    f.abbrev,
-    oxName:    ox.name,
-    fuelName:  f.name,
-    solid:     false,
+    isp_sl, isp_vac, of_ratio, sigmaOther,
+    density:    mix.density,
+    components: mix.components,
+    oxVolFrac:  mix.components[1].volFrac,
+    color:      f.color,
+    oxColor:    ox.color,
+    fuelColor:  f.color,
+    name:       `${f.name} / ${ox.name}`,
+    abbrev:     f.abbrev,
+    oxName:     ox.name,
+    fuelName:   f.name,
+    solid:      false,
   };
 }

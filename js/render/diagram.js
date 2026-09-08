@@ -267,20 +267,15 @@ export function renderSVG(phys) {
       <stop offset="100%" stop-color="${c}" stop-opacity=".10"/>
     </linearGradient>`;
     if (!s.p.solid) {
-      const fuC = s.p.fuelColor, oxC = s.p.oxColor;
-      html += `
-      <linearGradient id="gfu${i}" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%"   stop-color="${fuC}" stop-opacity=".07"/>
-        <stop offset="40%"  stop-color="${fuC}" stop-opacity=".30"/>
-        <stop offset="60%"  stop-color="${fuC}" stop-opacity=".30"/>
-        <stop offset="100%" stop-color="${fuC}" stop-opacity=".07"/>
-      </linearGradient>
-      <linearGradient id="gox${i}" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%"   stop-color="${oxC}" stop-opacity=".07"/>
-        <stop offset="40%"  stop-color="${oxC}" stop-opacity=".30"/>
-        <stop offset="60%"  stop-color="${oxC}" stop-opacity=".30"/>
-        <stop offset="100%" stop-color="${oxC}" stop-opacity=".07"/>
+      s.p.components.forEach((comp, j) => {
+        html += `
+      <linearGradient id="gc${i}_${j}" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stop-color="${comp.color}" stop-opacity=".07"/>
+        <stop offset="40%"  stop-color="${comp.color}" stop-opacity=".30"/>
+        <stop offset="60%"  stop-color="${comp.color}" stop-opacity=".30"/>
+        <stop offset="100%" stop-color="${comp.color}" stop-opacity=".07"/>
       </linearGradient>`;
+      });
     }
   });
 
@@ -301,18 +296,13 @@ export function renderSVG(phys) {
     </linearGradient>`;
     if (!bp.solid) {
       html += `
-      <linearGradient id="gboostfu" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%"   stop-color="${bp.fuelColor}" stop-opacity=".07"/>
-        <stop offset="40%"  stop-color="${bp.fuelColor}" stop-opacity=".28"/>
-        <stop offset="60%"  stop-color="${bp.fuelColor}" stop-opacity=".28"/>
-        <stop offset="100%" stop-color="${bp.fuelColor}" stop-opacity=".07"/>
-      </linearGradient>
-      <linearGradient id="gboostox" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%"   stop-color="${bp.oxColor}" stop-opacity=".07"/>
-        <stop offset="40%"  stop-color="${bp.oxColor}" stop-opacity=".28"/>
-        <stop offset="60%"  stop-color="${bp.oxColor}" stop-opacity=".28"/>
-        <stop offset="100%" stop-color="${bp.oxColor}" stop-opacity=".07"/>
-      </linearGradient>`;
+      ${bp.components.map((comp, j) => `
+      <linearGradient id="gboostc${j}" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stop-color="${comp.color}" stop-opacity=".07"/>
+        <stop offset="40%"  stop-color="${comp.color}" stop-opacity=".28"/>
+        <stop offset="60%"  stop-color="${comp.color}" stop-opacity=".28"/>
+        <stop offset="100%" stop-color="${comp.color}" stop-opacity=".07"/>
+      </linearGradient>`).join('')}`;
     }
   }
 
@@ -377,43 +367,35 @@ export function renderSVG(phys) {
           fill="${c}" font-size="10" font-family="monospace">S${i+1}</text>`;
       }
     } else {
-      const fuFrac = 1 - s.p.oxVolFrac;
-      const fuH = h * fuFrac, oxH = h * s.p.oxVolFrac;
-      const fuY = y, oxY = y + fuH;
-      const fuC = s.p.fuelColor, oxC = s.p.oxColor;
+      // One band per constituent, stacked in the order the propellant lists them.
+      // A tripropellant simply yields three bands instead of two.
+      let bandY = y;
+      s.p.components.forEach((comp, j) => {
+        const bh = h * comp.volFrac;
+        html += `<rect x="${sx}" y="${bandY}" width="${w}" height="${bh}" fill="url(#gc${i}_${j})"/>`;
+        if (j > 0) {
+          html += `<line x1="${sx + 3}" y1="${bandY}" x2="${sx + w - 3}" y2="${bandY}"
+            stroke="${c}" stroke-width="1.5" opacity="0.65"/>`;
+        }
+        const nb = Math.floor(bh / 28);
+        for (let b = 1; b <= nb; b++) {
+          const by = bandY + b * bh / (nb + 1);
+          html += `<line x1="${sx+4}" y1="${by}" x2="${sx+w-4}" y2="${by}" stroke="${comp.color}22" stroke-width="1"/>`;
+        }
+        if (bh > 18) {
+          html += `<text x="${cx}" y="${bandY + bh/2}" text-anchor="middle"
+            dominant-baseline="middle" fill="${comp.color}" fill-opacity=".95"
+            font-size="${fsize}" font-weight="700" font-family="monospace">${comp.name}</text>`;
+        }
+        bandY += bh;
+      });
 
-      html += `<rect x="${sx}" y="${fuY}" width="${w}" height="${fuH}" fill="url(#gfu${i})"/>`;
-      html += `<rect x="${sx}" y="${oxY}" width="${w}" height="${oxH}" fill="url(#gox${i})"/>`;
       html += `<rect x="${sx}" y="${y}" width="${w}" height="${h}"
         fill="none" stroke="${c}" stroke-width="1.5" rx="1"/>`;
-      html += `<line x1="${sx + 3}" y1="${oxY}" x2="${sx + w - 3}" y2="${oxY}"
-        stroke="${c}" stroke-width="1.5" opacity="0.65"/>`;
       html += `<line x1="${cx}" y1="${y}" x2="${cx}" y2="${y + h}"
         stroke="${c}18" stroke-width="1" stroke-dasharray="5,4"/>`;
-
-      const fuBands = Math.floor(fuH / 28);
-      for (let b = 1; b <= fuBands; b++) {
-        const by = fuY + b * fuH / (fuBands + 1);
-        html += `<line x1="${sx+4}" y1="${by}" x2="${sx+w-4}" y2="${by}" stroke="${fuC}22" stroke-width="1"/>`;
-      }
-      const oxBands = Math.floor(oxH / 28);
-      for (let b = 1; b <= oxBands; b++) {
-        const by = oxY + b * oxH / (oxBands + 1);
-        html += `<line x1="${sx+4}" y1="${by}" x2="${sx+w-4}" y2="${by}" stroke="${oxC}22" stroke-width="1"/>`;
-      }
-
-      html += `<text x="${sx + 5}" y="${fuY + 4}" dominant-baseline="hanging"
+      html += `<text x="${sx + 5}" y="${y + 4}" dominant-baseline="hanging"
         fill="${c}90" font-size="9" font-family="monospace" font-weight="700">S${i+1}</text>`;
-      if (fuH > 18) {
-        html += `<text x="${cx}" y="${fuY + fuH/2}" text-anchor="middle"
-          dominant-baseline="middle" fill="${fuC}" fill-opacity=".95"
-          font-size="${fsize}" font-weight="700" font-family="monospace">${s.p.fuelName}</text>`;
-      }
-      if (oxH > 18) {
-        html += `<text x="${cx}" y="${oxY + oxH/2}" text-anchor="middle"
-          dominant-baseline="middle" fill="${oxC}" fill-opacity=".95"
-          font-size="${fsize}" font-weight="700" font-family="monospace">${s.p.oxName}</text>`;
-      }
     }
 
     html += `<line x1="${sx - 6}" y1="${midY}" x2="${sx}" y2="${midY}" stroke="${c}50" stroke-width="1"/>`;
@@ -485,14 +467,18 @@ export function renderSVG(phys) {
         html += `<line x1="${bcx}" y1="${bBodyTop}" x2="${bcx}" y2="${bBodyBottom}"
           stroke="${bc}20" stroke-width="1" stroke-dasharray="4,3"/>`;
       } else {
-        const fuH = bH * (1 - bp.oxVolFrac), oxH = bH * bp.oxVolFrac;
-        const fuY = bBodyTop, oxY = bBodyTop + fuH;
-        html += `<rect x="${bx}" y="${fuY}" width="${bW}" height="${fuH}" fill="url(#gboostfu)"/>`;
-        html += `<rect x="${bx}" y="${oxY}" width="${bW}" height="${oxH}" fill="url(#gboostox)"/>`;
+        let bandY = bBodyTop;
+        bp.components.forEach((comp, j) => {
+          const bh = bH * comp.volFrac;
+          html += `<rect x="${bx}" y="${bandY}" width="${bW}" height="${bh}" fill="url(#gboostc${j})"/>`;
+          if (j > 0) {
+            html += `<line x1="${bx+2}" y1="${bandY}" x2="${bx+bW-2}" y2="${bandY}"
+              stroke="${bc}" stroke-width="1.2" opacity="0.6"/>`;
+          }
+          bandY += bh;
+        });
         html += `<rect x="${bx}" y="${bBodyTop}" width="${bW}" height="${bH}"
           fill="none" stroke="${bc}" stroke-width="1.2" rx="1"/>`;
-        html += `<line x1="${bx+2}" y1="${oxY}" x2="${bx+bW-2}" y2="${oxY}"
-          stroke="${bc}" stroke-width="1.2" opacity="0.6"/>`;
       }
 
       const bnH  = bst.diameter * 1.5 * scale;

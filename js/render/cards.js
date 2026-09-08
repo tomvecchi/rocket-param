@@ -66,6 +66,7 @@ export function renderCards() {
     const p    = resolveProp(s.oxidiser, s.fuel);
     const open = advancedOpen[s.id] || false;
     const isSolid = OXIDISERS[s.oxidiser]?.solid === true;
+    const hasFuelChoice = !isSolid && !OXIDISERS[s.oxidiser]?.tri;
 
     return `
       <div class="stage-card" data-id="${s.id}">
@@ -82,7 +83,7 @@ export function renderCards() {
           <select class="prop-select" data-id="${s.id}" data-param="oxidiser">
             ${oxidiserOptions(s.oxidiser)}
           </select>
-          ${!isSolid ? `<select class="prop-select" data-id="${s.id}" data-param="fuel">
+          ${hasFuelChoice ? `<select class="prop-select" data-id="${s.id}" data-param="fuel">
             ${fuelOptions(s.oxidiser, s.fuel)}
           </select>` : ''}
           <div class="row">
@@ -135,6 +136,7 @@ export function renderBoosterSection() {
   const hasBoost = bst.count > 0;
   const p        = resolveProp(bst.oxidiser, bst.fuel);
   const isSolid  = OXIDISERS[bst.oxidiser]?.solid === true;
+  const hasFuelChoice = !isSolid && !OXIDISERS[bst.oxidiser]?.tri;
 
   cont.innerHTML = `
     <div class="section-label">Side Boosters</div>
@@ -158,7 +160,7 @@ export function renderBoosterSection() {
         <select class="prop-select" id="s-boost-oxidiser">
           ${oxidiserOptions(bst.oxidiser)}
         </select>
-        ${!isSolid ? `<select class="prop-select" id="s-boost-fuel">
+        ${hasFuelChoice ? `<select class="prop-select" id="s-boost-fuel">
           ${fuelOptions(bst.oxidiser, bst.fuel)}
         </select>` : ''}
         <div class="row">

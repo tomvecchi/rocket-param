@@ -54,7 +54,7 @@ export function setupEvents() {
     if (param === 'oxidiser') {
       const newOx = el.value;
       s.oxidiser = newOx;
-      if (OXIDISERS[newOx]?.solid) {
+      if (OXIDISERS[newOx]?.solid || OXIDISERS[newOx]?.tri) {
         s.fuel = null;
       } else if (!COMBINATIONS[`${newOx}/${s.fuel}`]) {
         s.fuel = Object.keys(FUELS).find(fk => COMBINATIONS[`${newOx}/${fk}`]) || null;
